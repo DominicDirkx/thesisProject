@@ -3,12 +3,17 @@
 #include "Tudat/Astrodynamics/BasicAstrodynamics/celestialBodyConstants.h"
 #include "Tudat/Astrodynamics/Gravitation/librationPoint.h"
 #include "Tudat/Astrodynamics/Gravitation/jacobiEnergy.h"
+#include "Tudat/Astrodynamics/Propagators/integrateEquations.h"
+#include "Tudat/SimulationSetup/PropagationSetup/propagationTerminationSettings.h"
+#include "Tudat/SimulationSetup/PropagationSetup/propagationTermination.h"
+#include "Tudat/Mathematics/NumericalIntegrators/rungeKuttaVariableStepSizeIntegrator.h"
 
 #include "applyDifferentialCorrection.h"
 #include "computeDifferentialCorrection.h"
 #include "propagateOrbit.h"
+#include "stateDerivativeModel.h"
 
-
+using namespace tudat;
 
 Eigen::VectorXd applyDifferentialCorrection(const int librationPointNr, const std::string& orbitType,
                                             const Eigen::VectorXd& initialStateVector,
@@ -26,8 +31,52 @@ Eigen::VectorXd applyDifferentialCorrection(const int librationPointNr, const st
 
     std::map< double, Eigen::Vector6d > stateHistory;
 
+    clock_t tstart2, tend2;
+    tstart2 = clock ();
     std::pair< Eigen::MatrixXd, double > halfPeriodState = propagateOrbitToFinalCondition(
-                initialStateVectorInclSTM, massParameter, orbitalPeriod / 2.0, 1.0, stateHistory, -1, 0.0 );
+                initialStateVectorInclSTM, massParameter, orbitalPeriod / 2.0, 1.0, stateHistory, 1, 0.0 );
+    tend2 = clock ();
+
+    std::cout<<"Runtime with original scheme "<<tend2 -tstart2<<std::endl;
+
+    std::map< double, Eigen::MatrixXd > halfPeriodState2;
+    {
+
+        std::map< double, double > cummulativeComputationTimeHistory;
+        std::map< double, Eigen::VectorXd > dependentVariableHistory;
+        boost::function< Eigen::VectorXd( ) > dependentVariableFunction;
+        int saveFrequency = 1;
+
+        double minimumStepSize   = std::numeric_limits<double>::epsilon( ); // 2.22044604925031e-16
+        const double relativeErrorTolerance = 100.0 * std::numeric_limits<double>::epsilon( ); // 2.22044604925031e-14
+        const double absoluteErrorTolerance = 1.0e-24;
+
+        // Create integrator to be used for propagating.
+        boost::shared_ptr< numerical_integrators::NumericalIntegrator< double, Eigen::MatrixXd > > orbitIntegrator = boost::make_shared<
+                tudat::numerical_integrators::RungeKuttaVariableStepSizeIntegrator< double, Eigen::MatrixXd > >(
+                    tudat::numerical_integrators::RungeKuttaCoefficients::get( tudat::numerical_integrators::RungeKuttaCoefficients::rungeKuttaFehlberg78 ),
+                    &computeStateDerivative, 0.0, initialStateVectorInclSTM, minimumStepSize, 1.0E-5, relativeErrorTolerance, absoluteErrorTolerance );
+
+        double initialTimeStep = 1.0E-5;
+        boost::shared_ptr< propagators::PropagationTerminationCondition > propagationTerminationCondition =
+                propagators::createPropagationTerminationConditions(
+                    boost::make_shared< propagators::PropagationTimeTerminationSettings >(
+                        orbitalPeriod / 2.0, true ), simulation_setup::NamedBodyMap( ), 1.0E-5 );
+
+        clock_t tstart, tend;
+        tstart = clock( );
+        propagators::integrateEquationsFromIntegrator< Eigen::MatrixXd, double >(
+                    orbitIntegrator, initialTimeStep, propagationTerminationCondition, halfPeriodState2,
+                    dependentVariableHistory, cummulativeComputationTimeHistory, dependentVariableFunction, saveFrequency );
+        tend = clock( );
+
+        std::cout<<"Runtime with Tudat scheme "<<tend -tstart<<std::endl;
+
+    }
+    std::cout<<stateHistory.rbegin( )->second.transpose( )<<std::endl;
+    std::cout<<halfPeriodState2.rbegin( )->second.transpose( )<<std::endl;
+
+
     Eigen::MatrixXd stateVectorInclSTM      = halfPeriodState.first;
     double currentTime             = halfPeriodState.second;
     Eigen::VectorXd stateVectorOnly = stateVectorInclSTM.block( 0, 0, 6, 1 );

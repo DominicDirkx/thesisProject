@@ -9,13 +9,19 @@
 #include "Tudat/Astrodynamics/BasicAstrodynamics/celestialBodyConstants.h"
 #include "Tudat/Astrodynamics/Gravitation/librationPoint.h"
 #include "Tudat/Astrodynamics/Gravitation/jacobiEnergy.h"
+#include "Tudat/Astrodynamics/Propagators/integrateEquations.h"
+#include "Tudat/SimulationSetup/PropagationSetup/propagationTerminationSettings.h"
+#include "Tudat/SimulationSetup/PropagationSetup/propagationTermination.h"
+#include "Tudat/Mathematics/NumericalIntegrators/rungeKuttaVariableStepSizeIntegrator.h"
 
 #include "createInitialConditions.h"
 #include "applyDifferentialCorrection.h"
 #include "checkEigenvalues.h"
 #include "propagateOrbit.h"
 #include "richardsonThirdOrderApproximation.h"
+#include "stateDerivativeModel.h"
 
+using namespace tudat;
 
 void appendResultsVector(const double jacobiEnergy, const double orbitalPeriod, const Eigen::VectorXd& initialStateVector,
         const Eigen::MatrixXd& stateVectorInclSTM, std::vector< Eigen::VectorXd >& initialConditions )
@@ -201,10 +207,53 @@ Eigen::MatrixXd getCorrectedInitialState( const Eigen::Vector6d& initialStateGue
     orbitalPeriod = differentialCorrectionResult( 6 );
 
     // Propagate the initialStateVector for a full period and write output to file.
+    std::map< double, Eigen::MatrixXd > stateHistoryForDirect;
+
+    std::map< double, double > cummulativeComputationTimeHistory;
+    std::map< double, Eigen::VectorXd > dependentVariableHistory;
+    boost::function< Eigen::VectorXd( ) > dependentVariableFunction;
+    int saveFrequency = 1;
+
+
+    double minimumStepSize   = std::numeric_limits<double>::epsilon( ); // 2.22044604925031e-16
+    const double relativeErrorTolerance = 100.0 * std::numeric_limits<double>::epsilon( ); // 2.22044604925031e-14
+    const double absoluteErrorTolerance = 1.0e-24;
+
+    // Create integrator to be used for propagating.
+    boost::shared_ptr< numerical_integrators::NumericalIntegrator< double, Eigen::MatrixXd > > orbitIntegrator = boost::make_shared<
+            tudat::numerical_integrators::RungeKuttaVariableStepSizeIntegrator< double, Eigen::MatrixXd > >(
+                tudat::numerical_integrators::RungeKuttaCoefficients::get( tudat::numerical_integrators::RungeKuttaCoefficients::rungeKuttaFehlberg78 ),
+                &computeStateDerivative, 0.0, getFullInitialState( initialStateVector ), minimumStepSize, 1.0E-5, relativeErrorTolerance, absoluteErrorTolerance );
+
+    double initialTimeStep = 1.0E-5;
+    boost::shared_ptr< propagators::PropagationTerminationCondition > propagationTerminationCondition =
+            propagators::createPropagationTerminationConditions(
+                boost::make_shared< propagators::PropagationTimeTerminationSettings >(
+                    orbitalPeriod, true ), simulation_setup::NamedBodyMap( ), 1.0E-5 );
+
+    time_t tstart, tend;
+    tstart = time(0);
+    propagators::integrateEquationsFromIntegrator< Eigen::MatrixXd, double >(
+                orbitIntegrator, initialTimeStep, propagationTerminationCondition, stateHistoryForDirect,
+                dependentVariableHistory, cummulativeComputationTimeHistory, dependentVariableFunction, saveFrequency );
+    tend = time(0);
+
     std::map< double, Eigen::Vector6d > stateHistory;
+
+    time_t tstart2, tend2;
+    tstart2 = time(0);
     Eigen::MatrixXd stateVectorInclSTM = propagateOrbitToFinalCondition(
                 getFullInitialState( initialStateVector ), massParameter, orbitalPeriod, 1, stateHistory, 1000, 0.0 ).first;
+    tend2 = time(0);
+
+    std::cout<<"Times: "<<difftime(tend, tstart)<<" "<<difftime(tend2, tstart2)<<std::endl;
+
     writeStateHistoryToFile( stateHistory, orbitNumber, orbitType, librationPointNr, 1000, false );
+    //writeStateHistoryToFile( stateHistoryForDirect, orbitNumber, orbitType, librationPointNr + 10, 1000, false );
+
+    std::cout<<stateHistory.rbegin( )->second.transpose( )<<std::endl<<std::endl;
+    std::cout<<stateHistoryForDirect.rbegin( )->second.transpose( )<<std::endl;
+
 
     // Save results
     double jacobiEnergyHalfPeriod = tudat::gravitation::computeJacobiEnergy( massParameter, differentialCorrectionResult.segment( 7, 6 ) );

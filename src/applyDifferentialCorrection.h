@@ -1,6 +1,8 @@
 #ifndef TUDATBUNDLE_APPLYDIFFERENTIALCORRECTION_H
 #define TUDATBUNDLE_APPLYDIFFERENTIALCORRECTION_H
 
+#include <map>
+#include <iostream>
 
 
 #include "Eigen/Core"
