@@ -15,12 +15,13 @@
 
 using namespace tudat;
 
-Eigen::VectorXd applyDifferentialCorrection(const int librationPointNr, const std::string& orbitType,
-                                            const Eigen::VectorXd& initialStateVector,
-                                            double orbitalPeriod, const double massParameter,
-                                            double maxPositionDeviationFromPeriodicOrbit,
-                                            double maxVelocityDeviationFromPeriodicOrbit,
-                                            const int maxNumberOfIterations )
+Eigen::VectorXd applyDifferentialCorrection(
+        const int librationPointNr, const std::string& orbitType,
+        const Eigen::VectorXd& initialStateVector,
+        double orbitalPeriod, const double massParameter,
+        double maxPositionDeviationFromPeriodicOrbit,
+        double maxVelocityDeviationFromPeriodicOrbit,
+        const int maxNumberOfIterations )
 {
     std::cout << "\nApply differential correction:" << std::endl;
 
@@ -30,55 +31,11 @@ Eigen::VectorXd applyDifferentialCorrection(const int librationPointNr, const st
     initialStateVectorInclSTM.block( 0, 1, 6, 6 ).setIdentity( );
 
     std::map< double, Eigen::Vector6d > stateHistory;
-
-    clock_t tstart2, tend2;
-    tstart2 = clock ();
     std::pair< Eigen::MatrixXd, double > halfPeriodState = propagateOrbitToFinalCondition(
                 initialStateVectorInclSTM, massParameter, orbitalPeriod / 2.0, 1.0, stateHistory, 1, 0.0 );
-    tend2 = clock ();
 
-    std::cout<<"Runtime with original scheme "<<tend2 -tstart2<<std::endl;
-
-    std::map< double, Eigen::MatrixXd > halfPeriodState2;
-    {
-
-        std::map< double, double > cummulativeComputationTimeHistory;
-        std::map< double, Eigen::VectorXd > dependentVariableHistory;
-        boost::function< Eigen::VectorXd( ) > dependentVariableFunction;
-        int saveFrequency = 1;
-
-        double minimumStepSize   = std::numeric_limits<double>::epsilon( ); // 2.22044604925031e-16
-        const double relativeErrorTolerance = 100.0 * std::numeric_limits<double>::epsilon( ); // 2.22044604925031e-14
-        const double absoluteErrorTolerance = 1.0e-24;
-
-        // Create integrator to be used for propagating.
-        boost::shared_ptr< numerical_integrators::NumericalIntegrator< double, Eigen::MatrixXd > > orbitIntegrator = boost::make_shared<
-                tudat::numerical_integrators::RungeKuttaVariableStepSizeIntegrator< double, Eigen::MatrixXd > >(
-                    tudat::numerical_integrators::RungeKuttaCoefficients::get( tudat::numerical_integrators::RungeKuttaCoefficients::rungeKuttaFehlberg78 ),
-                    &computeStateDerivative, 0.0, initialStateVectorInclSTM, minimumStepSize, 1.0E-5, relativeErrorTolerance, absoluteErrorTolerance );
-
-        double initialTimeStep = 1.0E-5;
-        boost::shared_ptr< propagators::PropagationTerminationCondition > propagationTerminationCondition =
-                propagators::createPropagationTerminationConditions(
-                    boost::make_shared< propagators::PropagationTimeTerminationSettings >(
-                        orbitalPeriod / 2.0, true ), simulation_setup::NamedBodyMap( ), 1.0E-5 );
-
-        clock_t tstart, tend;
-        tstart = clock( );
-        propagators::integrateEquationsFromIntegrator< Eigen::MatrixXd, double >(
-                    orbitIntegrator, initialTimeStep, propagationTerminationCondition, halfPeriodState2,
-                    dependentVariableHistory, cummulativeComputationTimeHistory, dependentVariableFunction, saveFrequency );
-        tend = clock( );
-
-        std::cout<<"Runtime with Tudat scheme "<<tend -tstart<<std::endl;
-
-    }
-    std::cout<<stateHistory.rbegin( )->second.transpose( )<<std::endl;
-    std::cout<<halfPeriodState2.rbegin( )->second.transpose( )<<std::endl;
-
-
-    Eigen::MatrixXd stateVectorInclSTM      = halfPeriodState.first;
-    double currentTime             = halfPeriodState.second;
+    Eigen::MatrixXd stateVectorInclSTM = halfPeriodState.first;
+    double currentTime = halfPeriodState.second;
     Eigen::VectorXd stateVectorOnly = stateVectorInclSTM.block( 0, 0, 6, 1 );
 
     // Initialize variables
@@ -109,10 +66,9 @@ Eigen::VectorXd applyDifferentialCorrection(const int librationPointNr, const st
 
     int numberOfIterations = 0;
     // Apply differential correction and propagate to half-period point until converged.
-    while ( positionDeviationFromPeriodicOrbit > maxPositionDeviationFromPeriodicOrbit or
-            velocityDeviationFromPeriodicOrbit > maxVelocityDeviationFromPeriodicOrbit )
+    while ( ( positionDeviationFromPeriodicOrbit > maxPositionDeviationFromPeriodicOrbit ) ||
+            ( velocityDeviationFromPeriodicOrbit > maxVelocityDeviationFromPeriodicOrbit ) )
     {
-
         // If the maximum number of iterations has been reached, return a zero vector to stop the numerical continuation
         if ( numberOfIterations > maxNumberOfIterations and deviationFromPeriodicOrbitRelaxed == false )
         {
@@ -120,21 +76,19 @@ Eigen::VectorXd applyDifferentialCorrection(const int librationPointNr, const st
             maxPositionDeviationFromPeriodicOrbit = 10.0 * maxPositionDeviationFromPeriodicOrbit;
             maxVelocityDeviationFromPeriodicOrbit = 10.0 * maxVelocityDeviationFromPeriodicOrbit;
             deviationFromPeriodicOrbitRelaxed = true;
-//            return Eigen::VectorXd::Zero(15);
         }
 
         // Relax the maximum deviation requirements to compute the horizontal Lyapunov family in L2
         if (deviationFromPeriodicOrbitRelaxed == false and numberOfIterations > 10 and
                 orbitType == "horizontal" and librationPointNr == 2)
         {
-
             maxPositionDeviationFromPeriodicOrbit = 10.0 * maxPositionDeviationFromPeriodicOrbit;
             maxVelocityDeviationFromPeriodicOrbit = 10.0 * maxVelocityDeviationFromPeriodicOrbit;
             deviationFromPeriodicOrbitRelaxed = true;
         }
 
         // Apply differential correction
-        if (numberOfIterations > 10 and orbitType == "axial" and librationPointNr == 2)
+        if ( ( numberOfIterations > 10 ) && ( orbitType == "axial" ) && ( librationPointNr == 2 ) )
         {
             // To compute the full L2 axial family, fix x position after not finding a fully periodic solution after 10 iterations
             differentialCorrection = computeDifferentialCorrection( librationPointNr, orbitType, stateVectorInclSTM, true );
@@ -144,15 +98,13 @@ Eigen::VectorXd applyDifferentialCorrection(const int librationPointNr, const st
             differentialCorrection = computeDifferentialCorrection( librationPointNr, orbitType, stateVectorInclSTM, false );
         }
 
-        std::cout<<"APPLYING DIFF. CORR: "<<differentialCorrection<<std::endl;
-
         initialStateVectorInclSTM.block( 0, 0, 6, 1 ) += differentialCorrection.segment( 0, 6 ) / 1.0;
         orbitalPeriod  = orbitalPeriod + 2.0 * differentialCorrection( 6 ) / 1.0;
 
         std::pair< Eigen::MatrixXd, double > halfPeriodState = propagateOrbitToFinalCondition(
                     initialStateVectorInclSTM, massParameter, orbitalPeriod / 2.0, 1.0, stateHistory, -1, 0.0 );
-        stateVectorInclSTM      = halfPeriodState.first;
-        currentTime             = halfPeriodState.second;
+        stateVectorInclSTM = halfPeriodState.first;
+        currentTime = halfPeriodState.second;
         stateVectorOnly = stateVectorInclSTM.block( 0, 0, 6, 1 );
 
         if (orbitType == "axial")

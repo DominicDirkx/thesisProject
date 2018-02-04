@@ -182,20 +182,21 @@ double getEarthMoonAmplitude( const int librationPointNr, const std::string& orb
     return amplitude;
 }
 
-Eigen::Vector7d getInitialStateVectorGuess( const int librationPointNr, const std::string& orbitType, const int guessIteration,
+std::pair< Eigen::Vector6d, double >  getLibrationPointPeriodicOrbitInitialStateVectorGuess( const int librationPointNr, const std::string& orbitType, const int guessIteration,
                                             const boost::function< double( const int librationPointNr, const std::string& orbitType, const int guessIteration ) > getAmplitude )
 {
     double amplitude = getAmplitude( librationPointNr, orbitType, guessIteration );
-    Eigen::Vector7d richardsonThirdOrderApproximationResult = richardsonThirdOrderApproximation(orbitType, librationPointNr, amplitude);
+    std::pair< Eigen::Vector6d, double >  richardsonThirdOrderApproximationResult = richardsonApproximationLibrationPointPeriodicOrbit(orbitType, librationPointNr, amplitude);
 
     return richardsonThirdOrderApproximationResult;
 }
 
-Eigen::MatrixXd getCorrectedInitialState( const Eigen::Vector6d& initialStateGuess, double orbitalPeriod, const int orbitNumber,
-                                          const int librationPointNr, std::string orbitType, const double massParameter,
-                                          std::vector< Eigen::VectorXd >& initialConditions,
-                                          std::vector< Eigen::VectorXd >& differentialCorrections,
-                                          const double maxPositionDeviationFromPeriodicOrbit, double maxVelocityDeviationFromPeriodicOrbit )
+Eigen::MatrixXd correctPeriodicOrbitInitialState(
+        const Eigen::Vector6d& initialStateGuess, double orbitalPeriod, const int orbitNumber,
+        const int librationPointNr, std::string orbitType, const double massParameter,
+        std::vector< Eigen::VectorXd >& initialConditions,
+        std::vector< Eigen::VectorXd >& differentialCorrections,
+        const double maxPositionDeviationFromPeriodicOrbit, double maxVelocityDeviationFromPeriodicOrbit )
 {
     Eigen::Vector6d initialStateVector = initialStateGuess;
 
@@ -207,53 +208,11 @@ Eigen::MatrixXd getCorrectedInitialState( const Eigen::Vector6d& initialStateGue
     orbitalPeriod = differentialCorrectionResult( 6 );
 
     // Propagate the initialStateVector for a full period and write output to file.
-    std::map< double, Eigen::MatrixXd > stateHistoryForDirect;
-
-    std::map< double, double > cummulativeComputationTimeHistory;
-    std::map< double, Eigen::VectorXd > dependentVariableHistory;
-    boost::function< Eigen::VectorXd( ) > dependentVariableFunction;
-    int saveFrequency = 1;
-
-
-    double minimumStepSize   = std::numeric_limits<double>::epsilon( ); // 2.22044604925031e-16
-    const double relativeErrorTolerance = 100.0 * std::numeric_limits<double>::epsilon( ); // 2.22044604925031e-14
-    const double absoluteErrorTolerance = 1.0e-24;
-
-    // Create integrator to be used for propagating.
-    boost::shared_ptr< numerical_integrators::NumericalIntegrator< double, Eigen::MatrixXd > > orbitIntegrator = boost::make_shared<
-            tudat::numerical_integrators::RungeKuttaVariableStepSizeIntegrator< double, Eigen::MatrixXd > >(
-                tudat::numerical_integrators::RungeKuttaCoefficients::get( tudat::numerical_integrators::RungeKuttaCoefficients::rungeKuttaFehlberg78 ),
-                &computeStateDerivative, 0.0, getFullInitialState( initialStateVector ), minimumStepSize, 1.0E-5, relativeErrorTolerance, absoluteErrorTolerance );
-
-    double initialTimeStep = 1.0E-5;
-    boost::shared_ptr< propagators::PropagationTerminationCondition > propagationTerminationCondition =
-            propagators::createPropagationTerminationConditions(
-                boost::make_shared< propagators::PropagationTimeTerminationSettings >(
-                    orbitalPeriod, true ), simulation_setup::NamedBodyMap( ), 1.0E-5 );
-
-    time_t tstart, tend;
-    tstart = time(0);
-    propagators::integrateEquationsFromIntegrator< Eigen::MatrixXd, double >(
-                orbitIntegrator, initialTimeStep, propagationTerminationCondition, stateHistoryForDirect,
-                dependentVariableHistory, cummulativeComputationTimeHistory, dependentVariableFunction, saveFrequency );
-    tend = time(0);
-
     std::map< double, Eigen::Vector6d > stateHistory;
-
-    time_t tstart2, tend2;
-    tstart2 = time(0);
     Eigen::MatrixXd stateVectorInclSTM = propagateOrbitToFinalCondition(
                 getFullInitialState( initialStateVector ), massParameter, orbitalPeriod, 1, stateHistory, 1000, 0.0 ).first;
-    tend2 = time(0);
-
-    std::cout<<"Times: "<<difftime(tend, tstart)<<" "<<difftime(tend2, tstart2)<<std::endl;
 
     writeStateHistoryToFile( stateHistory, orbitNumber, orbitType, librationPointNr, 1000, false );
-    //writeStateHistoryToFile( stateHistoryForDirect, orbitNumber, orbitType, librationPointNr + 10, 1000, false );
-
-    std::cout<<stateHistory.rbegin( )->second.transpose( )<<std::endl<<std::endl;
-    std::cout<<stateHistoryForDirect.rbegin( )->second.transpose( )<<std::endl;
-
 
     // Save results
     double jacobiEnergyHalfPeriod = tudat::gravitation::computeJacobiEnergy( massParameter, differentialCorrectionResult.segment( 7, 6 ) );
@@ -351,14 +310,16 @@ double getDefaultArcLength(
         const double distanceIncrement,
         const Eigen::Vector6d& currentState )
 {
-   return distanceIncrement / currentState.segment( 0, 3 ).norm( );
+    return distanceIncrement / currentState.segment( 0, 3 ).norm( );
 }
 
-void createInitialConditions( const int librationPointNr, const std::string& orbitType,
-                              const double massParameter,
-                              const double maxPositionDeviationFromPeriodicOrbit, const double maxVelocityDeviationFromPeriodicOrbit,
-                              const double maxEigenvalueDeviation,
-                              const boost::function< double( const Eigen::Vector6d& ) > pseudoArcLengthFunction )
+void createPeriodicOrbitInitialConditions(
+        const int librationPointNr, const std::string& orbitType,
+        const double massParameter,
+        const double maxPositionDeviationFromPeriodicOrbit,
+        const double maxVelocityDeviationFromPeriodicOrbit,
+        const double maxEigenvalueDeviation,
+        const boost::function< double( const Eigen::Vector6d& ) > pseudoArcLengthFunction )
 
 {
     std::cout << "\nCreate initial conditions:\n" << std::endl;
@@ -374,23 +335,23 @@ void createInitialConditions( const int librationPointNr, const std::string& orb
     std::vector< Eigen::VectorXd > differentialCorrections;
 
     // Perform first two iteration
-    Eigen::Vector7d richardsonThirdOrderApproximationResultIteration1 =
-            getInitialStateVectorGuess( librationPointNr, orbitType, 0 );
-    Eigen::Vector7d richardsonThirdOrderApproximationResultIteration2 =
-            getInitialStateVectorGuess( librationPointNr, orbitType, 1 );
-    stateVectorInclSTM = getCorrectedInitialState(
-                richardsonThirdOrderApproximationResultIteration1.segment(0,6), richardsonThirdOrderApproximationResultIteration1( 6 ), 0,
+    std::pair< Eigen::Vector6d, double > richardsonThirdOrderApproximationResultIteration1 =
+            getLibrationPointPeriodicOrbitInitialStateVectorGuess( librationPointNr, orbitType, 0 );
+   std::pair< Eigen::Vector6d, double > richardsonThirdOrderApproximationResultIteration2 =
+            getLibrationPointPeriodicOrbitInitialStateVectorGuess( librationPointNr, orbitType, 1 );
+
+    correctPeriodicOrbitInitialState(
+                richardsonThirdOrderApproximationResultIteration1.first, richardsonThirdOrderApproximationResultIteration1.second, 0,
                 librationPointNr, orbitType, massParameter, initialConditions, differentialCorrections,
                 maxPositionDeviationFromPeriodicOrbit, maxVelocityDeviationFromPeriodicOrbit );
-    stateVectorInclSTM = getCorrectedInitialState(
-                richardsonThirdOrderApproximationResultIteration2.segment(0,6), richardsonThirdOrderApproximationResultIteration2( 6 ), 1,
+    correctPeriodicOrbitInitialState(
+                richardsonThirdOrderApproximationResultIteration2.first, richardsonThirdOrderApproximationResultIteration2.second, 1,
                 librationPointNr, orbitType, massParameter, initialConditions, differentialCorrections,
                 maxPositionDeviationFromPeriodicOrbit, maxVelocityDeviationFromPeriodicOrbit );
 
     // Set exit parameters of continuation procedure
     int numberOfInitialConditions = 2;
     int maximumNumberOfInitialConditions = 10000;
-//int maximumNumberOfInitialConditions = 3;
 
     // Generate periodic orbits until termination
     double orbitalPeriod  = 0.0, periodIncrement = 0.0, pseudoArcLengthCorrection = 0.0;
@@ -411,7 +372,7 @@ void createInitialConditions( const int librationPointNr, const std::string& orb
                 stateIncrement * pseudoArcLengthCorrection;
         orbitalPeriod = initialConditions[ initialConditions.size( ) - 1 ]( 1 ) +
                 periodIncrement * pseudoArcLengthCorrection;
-        stateVectorInclSTM = getCorrectedInitialState(
+        stateVectorInclSTM = correctPeriodicOrbitInitialState(
                     initialStateVector, orbitalPeriod, numberOfInitialConditions,
                     librationPointNr, orbitType, massParameter, initialConditions, differentialCorrections,
                     maxPositionDeviationFromPeriodicOrbit, maxVelocityDeviationFromPeriodicOrbit );

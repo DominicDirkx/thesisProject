@@ -1,5 +1,8 @@
+#include <iostream>
+
 #include "Tudat/Basics/utilityMacros.h"
 #include "Tudat/Astrodynamics/Gravitation/librationPoint.h"
+#include "Tudat/Astrodynamics/Propagators/stateDerivativeCircularRestrictedThreeBodyProblem.h"
 
 #include "stateDerivativeModel.h"
 
@@ -64,6 +67,8 @@ Eigen::MatrixXd computeStateDerivative( const double time, const Eigen::MatrixXd
 
     // Differentiate the STM.
     stateDerivative.block( 0, 1, 6, 6 ) = stmDerivativeFunction * cartesianState.block( 0, 1, 6, 6 );
+
+    tudat::propagators:: StateDerivativeCircularRestrictedThreeBodyProblem stateDerivativeObject( massParameter );
 
     return stateDerivative;
 }

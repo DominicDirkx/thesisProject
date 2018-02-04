@@ -22,6 +22,16 @@
 #include "connectManifoldsAtTheta.h"
 //#include "omp.h"
 
+//
+//  TODO, Code refactoring:
+//
+//  - In correctPeriodicOrbitInitialState function, the appendDifferentialCorrectionResultsVector and appendResultsVector functions
+//  should be changed, so that the output is written to a well organized struct, with clear identifiers for all information.
+//  File output function should be created for consistency with Koen's format.
+//  -  librationPointNr, orbitType, massParameter
+//  -  maximumNumberOfInitialConditions: Should be an input parameter to createPeriodicOrbitInitialConditions, as should settings for
+//  continuation
+//  - integrator settings should be an input variable to e.g. createPeriodicOrbitInitialConditions.
 
 double massParameter = tudat::gravitation::circular_restricted_three_body_problem::computeMassParameter( tudat::celestial_body_constants::EARTH_GRAVITATIONAL_PARAMETER, tudat::celestial_body_constants::MOON_GRAVITATIONAL_PARAMETER );
 
@@ -37,27 +47,27 @@ int main (){
         for (unsigned int i=1; i<=6; i++) {
             if (i ==1)
             {
-                createInitialConditions(1, "horizontal");
+                createPeriodicOrbitInitialConditions(1, "horizontal");
             }
             if (i ==2)
             {
-                createInitialConditions(2, "horizontal");
+                createPeriodicOrbitInitialConditions(2, "horizontal");
             }
             if (i ==3)
             {
-                createInitialConditions(1, "halo");
+                createPeriodicOrbitInitialConditions(1, "halo");
             }
             if (i ==4)
             {
-                createInitialConditions(2, "halo");
+                createPeriodicOrbitInitialConditions(2, "halo");
             }
             if (i ==5)
             {
-                createInitialConditions(1, "vertical");
+                createPeriodicOrbitInitialConditions(1, "vertical");
             }
             if (i ==6)
             {
-                createInitialConditions(2, "vertical");
+                createPeriodicOrbitInitialConditions(2, "vertical");
             }
         }
     }

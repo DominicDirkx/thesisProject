@@ -5,8 +5,9 @@
 
 #include <string>
 
+#include "Tudat/Basics/basicTypedefs.h"
 
-Eigen::VectorXd richardsonThirdOrderApproximation( std::string orbitType, int librationPointNr,
+std::pair< Eigen::Vector6d, double > richardsonApproximationLibrationPointPeriodicOrbit( std::string orbitType, int librationPointNr,
                                                    double amplitude, double n= 1.0 );
 
 

@@ -14,7 +14,7 @@
 #include "functions/librationPointLocationFunction2.h"
 #include "propagateOrbit.h"
 
-Eigen::VectorXd richardsonThirdOrderApproximation(std::string orbitType, int librationPointNr,
+std::pair< Eigen::Vector6d, double >  richardsonApproximationLibrationPointPeriodicOrbit(std::string orbitType, int librationPointNr,
                                                   double amplitude, double n )
 {
     std::cout << "\nCreate initial conditions:\n" << std::endl;
@@ -25,7 +25,7 @@ Eigen::VectorXd richardsonThirdOrderApproximation(std::string orbitType, int lib
     const double primaryGravitationalParameter = tudat::celestial_body_constants::EARTH_GRAVITATIONAL_PARAMETER;
     const double secondaryGravitationalParameter = tudat::celestial_body_constants::MOON_GRAVITATIONAL_PARAMETER;
     const double massParameter = tudat::gravitation::circular_restricted_three_body_problem::computeMassParameter( primaryGravitationalParameter, secondaryGravitationalParameter );
-    Eigen::VectorXd initialStateVectorInclPeriod = Eigen::VectorXd::Zero(7);
+    Eigen::Vector6d initialStateVector = Eigen::Vector6d::Zero( );
 
     double gammaL;
     double c2;
@@ -146,47 +146,16 @@ Eigen::VectorXd richardsonThirdOrderApproximation(std::string orbitType, int lib
     double orbitalPeriod = 2.0 * tudat::mathematical_constants::PI / (lambda * omega);
 
     if (librationPointNr == 1){
-        initialStateVectorInclPeriod(0) = (x - 1.0) * gammaL + 1.0 - massParameter;
+        initialStateVector(0) = (x - 1.0) * gammaL + 1.0 - massParameter;
     } if (librationPointNr == 2){
-        initialStateVectorInclPeriod(0) = (x + 1.0) * gammaL + 1.0 - massParameter;
+        initialStateVector(0) = (x + 1.0) * gammaL + 1.0 - massParameter;
     }
 
-    initialStateVectorInclPeriod(1) = y * gammaL;
-    initialStateVectorInclPeriod(2) = z * gammaL;
-    initialStateVectorInclPeriod(3) = xdot * gammaL;
-    initialStateVectorInclPeriod(4) = ydot * gammaL;
-    initialStateVectorInclPeriod(5) = zdot * gammaL;
-    initialStateVectorInclPeriod(6) = orbitalPeriod;
-
-    std::cout << initialStateVectorInclPeriod << std::endl;
+    initialStateVector(1) = y * gammaL;
+    initialStateVector(2) = z * gammaL;
+    initialStateVector(3) = xdot * gammaL;
+    initialStateVector(4) = ydot * gammaL;
+    initialStateVector(5) = zdot * gammaL;
     
-//    std::cout << "gammaL = " << gammaL << endl
-//              << "lambda = " << lambda << endl
-//              << "k = "      << k      << endl
-//              << "delta = "  << delta  << endl
-//              << "c2 = "     << c2     << endl
-//              << "c3 = "     << c3     << endl
-//              << "c4 = "     << c4     << endl
-//              << "s1 = "     << s1     << endl
-//              << "s2 = "     << s2     << endl
-//              << "l1 = "     << l1     << endl
-//              << "l2 = "     << l2     << endl
-//              << "a1 = "     << a1     << endl
-//              << "a2 = "     << a2     << endl
-//              << "d1 = "     << d1     << endl
-//              << "d2 = "     << d2     << endl
-//              << "a21 = "    << a21    << endl
-//              << "a22 = "    << a22    << endl
-//              << "a23 = "    << a23    << endl
-//              << "a24 = "    << a24    << endl
-//              << "a31 = "    << a31    << endl
-//              << "a32 = "    << a32    << endl
-//              << "b21 = "    << b21    << endl
-//              << "b22 = "    << b22    << endl
-//              << "b31 = "    << b31    << endl
-//              << "b32 = "    << b32    << endl
-//              << "d21 = "    << d21    << endl
-//              << "d31 = "    << d31    << endl
-//              << "d32 = "    << d32    << endl;
-    return initialStateVectorInclPeriod;
+    return std::make_pair( initialStateVector, orbitalPeriod );
 }

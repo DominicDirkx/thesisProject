@@ -4,10 +4,17 @@
 #include "Tudat/Astrodynamics/Gravitation/jacobiEnergy.h"
 #include "Tudat/Astrodynamics/BasicAstrodynamics/celestialBodyConstants.h"
 #include "Tudat/Astrodynamics/Gravitation/librationPoint.h"
+#include "Tudat/Astrodynamics/Propagators/integrateEquations.h"
+#include "Tudat/Astrodynamics/Propagators/stateDerivativeCircularRestrictedThreeBodyProblem.h"
+#include "Tudat/SimulationSetup/PropagationSetup/propagationTerminationSettings.h"
+#include "Tudat/SimulationSetup/PropagationSetup/propagationTermination.h"
+#include "Tudat/Mathematics/NumericalIntegrators/rungeKuttaVariableStepSizeIntegrator.h"
 #include "Tudat/InputOutput/basicInputOutput.h"
 
 #include "propagateOrbit.h"
 #include "stateDerivativeModel.h"
+
+using namespace tudat;
 
 Eigen::MatrixXd getFullInitialState( const Eigen::Vector6d& initialState )
 {
@@ -23,7 +30,7 @@ void writeStateHistoryToFile(
         const int saveEveryNthIntegrationStep, const bool completeInitialConditionsHaloFamily )
 {
     std::string fileNameString;
-    std::string directoryString = "../data/raw/orbits/";
+    std::string directoryString = "/home/dominic/Software/numericalAstrodynamicsTudatBundle/tudatBundle/tudatApplications/thesisProject/data/raw/orbits/";
     // Prepare output file
     if (saveEveryNthIntegrationStep != 1000)
     {
@@ -63,10 +70,14 @@ std::pair< Eigen::MatrixXd, double > propagateOrbit(
     const double relativeErrorTolerance = 100.0 * std::numeric_limits<double>::epsilon( ); // 2.22044604925031e-14
     const double absoluteErrorTolerance = 1.0e-24;
 
+    boost::shared_ptr< propagators::StateDerivativeCircularRestrictedThreeBodyProblem > cr3bpStateDerivative =
+            boost::make_shared< propagators::StateDerivativeCircularRestrictedThreeBodyProblem  >( massParameter );
+
     // Create integrator to be used for propagating.
     tudat::numerical_integrators::RungeKuttaVariableStepSizeIntegrator< double, Eigen::MatrixXd > orbitIntegrator (
                 tudat::numerical_integrators::RungeKuttaCoefficients::get( tudat::numerical_integrators::RungeKuttaCoefficients::rungeKuttaFehlberg78 ),
-                &computeStateDerivative, 0.0, stateVectorInclSTM, minimumStepSize, maximumStepSize, relativeErrorTolerance, absoluteErrorTolerance);
+                boost::bind( &propagators::StateDerivativeCircularRestrictedThreeBodyProblem::computeStateDerivativeWithStateTransitionMatrix,
+                             cr3bpStateDerivative, _1, _2 ), 0.0, stateVectorInclSTM, minimumStepSize, maximumStepSize, relativeErrorTolerance, absoluteErrorTolerance);
 
     if (direction > 0)
     {
@@ -92,56 +103,94 @@ std::pair< Eigen::MatrixXd, double > propagateOrbit(
 std::pair< Eigen::MatrixXd, double >  propagateOrbitToFinalCondition(
         const Eigen::MatrixXd fullInitialState, const double massParameter, const double finalTime, int direction,
         std::map< double, Eigen::Vector6d >& stateHistory, const int saveFrequency, const double initialTime )
-{           
-    if( saveFrequency >= 0 )
+{
+    std::map< double, Eigen::MatrixXd > fullStateHistory;
+
+    std::map< double, double > cummulativeComputationTimeHistory;
+    std::map< double, Eigen::VectorXd > dependentVariableHistory;
+    boost::function< Eigen::VectorXd( ) > dependentVariableFunction;
+
+    double minimumStepSize   = std::numeric_limits<double>::epsilon( ); // 2.22044604925031e-16
+    const double relativeErrorTolerance = 100.0 * std::numeric_limits<double>::epsilon( ); // 2.22044604925031e-14
+    const double absoluteErrorTolerance = 1.0e-24;
+
+    // Create integrator to be used for propagating.
+
+    boost::shared_ptr< propagators::StateDerivativeCircularRestrictedThreeBodyProblem > cr3bpStateDerivative =
+            boost::make_shared< propagators::StateDerivativeCircularRestrictedThreeBodyProblem  >( massParameter );
+    boost::shared_ptr< numerical_integrators::NumericalIntegrator< double, Eigen::MatrixXd > > orbitIntegrator = boost::make_shared<
+            tudat::numerical_integrators::RungeKuttaVariableStepSizeIntegrator< double, Eigen::MatrixXd > >(
+                tudat::numerical_integrators::RungeKuttaCoefficients::get( tudat::numerical_integrators::RungeKuttaCoefficients::rungeKuttaFehlberg78 ),
+                boost::bind( &propagators::StateDerivativeCircularRestrictedThreeBodyProblem::computeStateDerivativeWithStateTransitionMatrix,
+                             cr3bpStateDerivative, _1, _2 ), initialTime, fullInitialState, minimumStepSize, 1.0E-5, relativeErrorTolerance, absoluteErrorTolerance );
+
+    double initialTimeStep = 1.0E-5;
+    boost::shared_ptr< propagators::PropagationTerminationCondition > propagationTerminationCondition =
+            propagators::createPropagationTerminationConditions(
+                boost::make_shared< propagators::PropagationTimeTerminationSettings >(
+                    finalTime, true ), simulation_setup::NamedBodyMap( ), 1.0E-5 );
+
+    propagators::integrateEquationsFromIntegrator< Eigen::MatrixXd, double >(
+                orbitIntegrator, initialTimeStep, propagationTerminationCondition, fullStateHistory,
+                dependentVariableHistory, cummulativeComputationTimeHistory, dependentVariableFunction, saveFrequency );
+
+    for( std::map< double, Eigen::MatrixXd >::const_iterator stateIterator = fullStateHistory.begin( );
+         stateIterator != fullStateHistory.end( ); stateIterator++ )
     {
-        stateHistory[ initialTime ] = fullInitialState.block( 0, 0, 6, 1 );
+        stateHistory[ stateIterator->first ] = stateIterator->second.block( 0, 0, 6, 1 );
     }
 
-    // Perform first integration step
-    std::pair< Eigen::MatrixXd, double > previousState;
-    std::pair< Eigen::MatrixXd, double > currentState;
-    currentState = propagateOrbit( fullInitialState, massParameter, initialTime, direction, 1.0E-5, 1.0E-5 );
-    double currentTime = currentState.second;
+    return std::make_pair( fullStateHistory.rbegin( )->second, fullStateHistory.rbegin( )->first );
 
-    int stepCounter = 1;
-    // Perform integration steps until end of half orbital period
-    for (int i = 5; i <= 12; i++)
-    {
+//    if( saveFrequency >= 0 )
+//    {
+//        stateHistory[ initialTime ] = fullInitialState.block( 0, 0, 6, 1 );
+//    }
 
-        double initialStepSize = pow(10,(static_cast<float>(-i)));
-        double maximumStepSize = initialStepSize;
+//    // Perform first integration step
+//    std::pair< Eigen::MatrixXd, double > previousState;
+//    std::pair< Eigen::MatrixXd, double > currentState;
+//    currentState = propagateOrbit( fullInitialState, massParameter, initialTime, direction, 1.0E-5, 1.0E-5 );
+//    double currentTime = currentState.second;
 
-        while (currentTime <= finalTime )
-        {
-            // Write every nth integration step to file.
-            if ( saveFrequency > 0 && ( stepCounter % saveFrequency == 0 ) )
-            {
-                stateHistory[ currentTime ] = currentState.first.block( 0, 0, 6, 1 );
-            }
+//    int stepCounter = 1;
+//    // Perform integration steps until end of half orbital period
+//    for (int i = 5; i <= 12; i++)
+//    {
 
-            currentTime = currentState.second;
-            previousState = currentState;
-            currentState = propagateOrbit(currentState.first, massParameter, currentTime, 1, initialStepSize, maximumStepSize);
+//        double initialStepSize = pow(10,(static_cast<float>(-i)));
+//        double maximumStepSize = initialStepSize;
 
-            stepCounter++;
+//        while (currentTime <= finalTime )
+//        {
+//            // Write every nth integration step to file.
+//            if ( saveFrequency > 0 && ( stepCounter % saveFrequency == 0 ) )
+//            {
+//                stateHistory[ currentTime ] = currentState.first.block( 0, 0, 6, 1 );
+//            }
 
-            if (currentState.second > finalTime )
-            {
-                currentState = previousState;
-                currentTime = currentState.second;
-                break;
-            }
-        }
-    }
+//            currentTime = currentState.second;
+//            previousState = currentState;
+//            currentState = propagateOrbit(currentState.first, massParameter, currentTime, 1, initialStepSize, maximumStepSize);
 
-    // Add final state after minimizing overshoot
-    if ( saveFrequency > 0 )
-    {
-        stateHistory[ currentTime ] = currentState.first.block( 0, 0, 6, 1 );
-    }
+//            stepCounter++;
 
-    return currentState;
+//            if (currentState.second > finalTime )
+//            {
+//                currentState = previousState;
+//                currentTime = currentState.second;
+//                break;
+//            }
+//        }
+//    }
+
+//    // Add final state after minimizing overshoot
+//    if ( saveFrequency > 0 )
+//    {
+//        stateHistory[ currentTime ] = currentState.first.block( 0, 0, 6, 1 );
+//    }
+
+//    return currentState;
 }
 
 std::pair< Eigen::MatrixXd, double >  propagateOrbitWithStateTransitionMatrixToFinalCondition(
