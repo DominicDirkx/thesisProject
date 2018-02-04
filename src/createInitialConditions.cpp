@@ -194,6 +194,7 @@ std::pair< Eigen::Vector6d, double >  getLibrationPointPeriodicOrbitInitialState
 Eigen::MatrixXd correctPeriodicOrbitInitialState(
         const Eigen::Vector6d& initialStateGuess, double orbitalPeriod, const int orbitNumber,
         const int librationPointNr, std::string orbitType, const double massParameter,
+        const boost::shared_ptr< tudat::numerical_integrators::IntegratorSettings< double > > integratorSettings,
         std::vector< Eigen::VectorXd >& initialConditions,
         std::vector< Eigen::VectorXd >& differentialCorrections,
         const double maxPositionDeviationFromPeriodicOrbit, double maxVelocityDeviationFromPeriodicOrbit )
@@ -202,7 +203,7 @@ Eigen::MatrixXd correctPeriodicOrbitInitialState(
 
     // Correct state vector guess
     Eigen::VectorXd differentialCorrectionResult = applyDifferentialCorrection(
-                librationPointNr, orbitType, initialStateVector, orbitalPeriod, massParameter,
+                librationPointNr, orbitType, initialStateVector, orbitalPeriod, massParameter, integratorSettings,
                 maxPositionDeviationFromPeriodicOrbit, maxVelocityDeviationFromPeriodicOrbit );
     initialStateVector = differentialCorrectionResult.segment( 0, 6 );
     orbitalPeriod = differentialCorrectionResult( 6 );
@@ -210,7 +211,7 @@ Eigen::MatrixXd correctPeriodicOrbitInitialState(
     // Propagate the initialStateVector for a full period and write output to file.
     std::map< double, Eigen::Vector6d > stateHistory;
     Eigen::MatrixXd stateVectorInclSTM = propagateOrbitToFinalCondition(
-                getFullInitialState( initialStateVector ), massParameter, orbitalPeriod, 1, stateHistory, 1000, 0.0 ).first;
+                getFullInitialState( initialStateVector ), massParameter, integratorSettings, orbitalPeriod, 1, stateHistory ).first;
 
     writeStateHistoryToFile( stateHistory, orbitNumber, orbitType, librationPointNr, 1000, false );
 
@@ -315,6 +316,7 @@ double getDefaultArcLength(
 
 void createPeriodicOrbitInitialConditions(
         const int librationPointNr, const std::string& orbitType,
+        const boost::shared_ptr< tudat::numerical_integrators::IntegratorSettings< double > > integratorSettings,
         const double massParameter,
         const double maxPositionDeviationFromPeriodicOrbit,
         const double maxVelocityDeviationFromPeriodicOrbit,
@@ -342,11 +344,11 @@ void createPeriodicOrbitInitialConditions(
 
     correctPeriodicOrbitInitialState(
                 richardsonThirdOrderApproximationResultIteration1.first, richardsonThirdOrderApproximationResultIteration1.second, 0,
-                librationPointNr, orbitType, massParameter, initialConditions, differentialCorrections,
+                librationPointNr, orbitType, massParameter, integratorSettings, initialConditions, differentialCorrections,
                 maxPositionDeviationFromPeriodicOrbit, maxVelocityDeviationFromPeriodicOrbit );
     correctPeriodicOrbitInitialState(
                 richardsonThirdOrderApproximationResultIteration2.first, richardsonThirdOrderApproximationResultIteration2.second, 1,
-                librationPointNr, orbitType, massParameter, initialConditions, differentialCorrections,
+                librationPointNr, orbitType, massParameter, integratorSettings, initialConditions, differentialCorrections,
                 maxPositionDeviationFromPeriodicOrbit, maxVelocityDeviationFromPeriodicOrbit );
 
     // Set exit parameters of continuation procedure
@@ -359,6 +361,7 @@ void createPeriodicOrbitInitialConditions(
     Eigen::Vector6d stateIncrement;
     while( ( numberOfInitialConditions < maximumNumberOfInitialConditions ) && continueNumericalContinuation)
     {
+        std::cout<<"Generating initial state "<<numberOfInitialConditions<<" "<<librationPointNr<<" "<<orbitType<<std::endl;
         // Determine increments to state and time
         stateIncrement = initialConditions[ initialConditions.size( ) - 1 ].segment( 2, 6 ) -
                 initialConditions[ initialConditions.size( ) - 2 ].segment( 2, 6 );
@@ -374,7 +377,7 @@ void createPeriodicOrbitInitialConditions(
                 periodIncrement * pseudoArcLengthCorrection;
         stateVectorInclSTM = correctPeriodicOrbitInitialState(
                     initialStateVector, orbitalPeriod, numberOfInitialConditions,
-                    librationPointNr, orbitType, massParameter, initialConditions, differentialCorrections,
+                    librationPointNr, orbitType, massParameter, integratorSettings, initialConditions, differentialCorrections,
                     maxPositionDeviationFromPeriodicOrbit, maxVelocityDeviationFromPeriodicOrbit );
 
         continueNumericalContinuation = checkTermination(differentialCorrections, stateVectorInclSTM, orbitType, librationPointNr, maxEigenvalueDeviation );

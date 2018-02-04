@@ -8,7 +8,6 @@
 #include "Tudat/Astrodynamics/Propagators/stateDerivativeCircularRestrictedThreeBodyProblem.h"
 #include "Tudat/SimulationSetup/PropagationSetup/propagationTerminationSettings.h"
 #include "Tudat/SimulationSetup/PropagationSetup/propagationTermination.h"
-#include "Tudat/Mathematics/NumericalIntegrators/rungeKuttaVariableStepSizeIntegrator.h"
 #include "Tudat/InputOutput/basicInputOutput.h"
 
 #include "propagateOrbit.h"
@@ -101,8 +100,10 @@ std::pair< Eigen::MatrixXd, double > propagateOrbit(
 }
 
 std::pair< Eigen::MatrixXd, double >  propagateOrbitToFinalCondition(
-        const Eigen::MatrixXd fullInitialState, const double massParameter, const double finalTime, int direction,
-        std::map< double, Eigen::Vector6d >& stateHistory, const int saveFrequency, const double initialTime )
+        const Eigen::MatrixXd& fullInitialState, const double massParameter,
+        const boost::shared_ptr< numerical_integrators::IntegratorSettings< double > > integratorSettings,
+        const double finalTime, int direction,
+        std::map< double, Eigen::Vector6d >& stateHistory )
 {
     std::map< double, Eigen::MatrixXd > fullStateHistory;
 
@@ -110,29 +111,26 @@ std::pair< Eigen::MatrixXd, double >  propagateOrbitToFinalCondition(
     std::map< double, Eigen::VectorXd > dependentVariableHistory;
     boost::function< Eigen::VectorXd( ) > dependentVariableFunction;
 
-    double minimumStepSize   = std::numeric_limits<double>::epsilon( ); // 2.22044604925031e-16
-    const double relativeErrorTolerance = 100.0 * std::numeric_limits<double>::epsilon( ); // 2.22044604925031e-14
-    const double absoluteErrorTolerance = 1.0e-24;
-
     // Create integrator to be used for propagating.
-
     boost::shared_ptr< propagators::StateDerivativeCircularRestrictedThreeBodyProblem > cr3bpStateDerivative =
             boost::make_shared< propagators::StateDerivativeCircularRestrictedThreeBodyProblem  >( massParameter );
-    boost::shared_ptr< numerical_integrators::NumericalIntegrator< double, Eigen::MatrixXd > > orbitIntegrator = boost::make_shared<
-            tudat::numerical_integrators::RungeKuttaVariableStepSizeIntegrator< double, Eigen::MatrixXd > >(
-                tudat::numerical_integrators::RungeKuttaCoefficients::get( tudat::numerical_integrators::RungeKuttaCoefficients::rungeKuttaFehlberg78 ),
-                boost::bind( &propagators::StateDerivativeCircularRestrictedThreeBodyProblem::computeStateDerivativeWithStateTransitionMatrix,
-                             cr3bpStateDerivative, _1, _2 ), initialTime, fullInitialState, minimumStepSize, 1.0E-5, relativeErrorTolerance, absoluteErrorTolerance );
+    boost::function< Eigen::MatrixXd( const double, const Eigen::MatrixXd& ) > stateDerivativeFunction =
+            boost::bind( &propagators::StateDerivativeCircularRestrictedThreeBodyProblem::computeStateDerivativeWithStateTransitionMatrix,
+                                 cr3bpStateDerivative, _1, _2 );
+    boost::shared_ptr< numerical_integrators::NumericalIntegrator< double, Eigen::MatrixXd > > orbitIntegrator =
+            numerical_integrators::createIntegrator< double, Eigen::MatrixXd >(
+               stateDerivativeFunction , fullInitialState, integratorSettings );
 
-    double initialTimeStep = 1.0E-5;
+    double initialTimeStep = integratorSettings->initialTimeStep_;
     boost::shared_ptr< propagators::PropagationTerminationCondition > propagationTerminationCondition =
             propagators::createPropagationTerminationConditions(
                 boost::make_shared< propagators::PropagationTimeTerminationSettings >(
-                    finalTime, true ), simulation_setup::NamedBodyMap( ), 1.0E-5 );
+                    finalTime, true ), simulation_setup::NamedBodyMap( ), initialTimeStep );
 
     propagators::integrateEquationsFromIntegrator< Eigen::MatrixXd, double >(
                 orbitIntegrator, initialTimeStep, propagationTerminationCondition, fullStateHistory,
-                dependentVariableHistory, cummulativeComputationTimeHistory, dependentVariableFunction, saveFrequency );
+                dependentVariableHistory, cummulativeComputationTimeHistory, dependentVariableFunction,
+                integratorSettings->saveFrequency_ );
 
     for( std::map< double, Eigen::MatrixXd >::const_iterator stateIterator = fullStateHistory.begin( );
          stateIterator != fullStateHistory.end( ); stateIterator++ )

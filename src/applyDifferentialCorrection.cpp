@@ -6,7 +6,6 @@
 #include "Tudat/Astrodynamics/Propagators/integrateEquations.h"
 #include "Tudat/SimulationSetup/PropagationSetup/propagationTerminationSettings.h"
 #include "Tudat/SimulationSetup/PropagationSetup/propagationTermination.h"
-#include "Tudat/Mathematics/NumericalIntegrators/rungeKuttaVariableStepSizeIntegrator.h"
 
 #include "applyDifferentialCorrection.h"
 #include "computeDifferentialCorrection.h"
@@ -19,12 +18,11 @@ Eigen::VectorXd applyDifferentialCorrection(
         const int librationPointNr, const std::string& orbitType,
         const Eigen::VectorXd& initialStateVector,
         double orbitalPeriod, const double massParameter,
+        const boost::shared_ptr< tudat::numerical_integrators::IntegratorSettings< double > > integratorSettings,
         double maxPositionDeviationFromPeriodicOrbit,
         double maxVelocityDeviationFromPeriodicOrbit,
         const int maxNumberOfIterations )
 {
-    std::cout << "\nApply differential correction:" << std::endl;
-
     Eigen::MatrixXd initialStateVectorInclSTM = Eigen::MatrixXd::Zero( 6, 7 );
 
     initialStateVectorInclSTM.block( 0, 0, 6, 1 ) = initialStateVector;
@@ -32,7 +30,7 @@ Eigen::VectorXd applyDifferentialCorrection(
 
     std::map< double, Eigen::Vector6d > stateHistory;
     std::pair< Eigen::MatrixXd, double > halfPeriodState = propagateOrbitToFinalCondition(
-                initialStateVectorInclSTM, massParameter, orbitalPeriod / 2.0, 1.0, stateHistory, 1, 0.0 );
+                initialStateVectorInclSTM, massParameter, integratorSettings, orbitalPeriod / 2.0, 1.0, stateHistory );
 
     Eigen::MatrixXd stateVectorInclSTM = halfPeriodState.first;
     double currentTime = halfPeriodState.second;
@@ -57,10 +55,10 @@ Eigen::VectorXd applyDifferentialCorrection(
         velocityDeviationFromPeriodicOrbit = sqrt(pow(stateVectorOnly(3), 2) + pow(stateVectorOnly(5), 2));
     }
 
-    std::cout << "\nInitial state vector:\n"                  << initialStateVectorInclSTM.block( 0, 0, 6, 1 )
-              << "\nPosition deviation from periodic orbit: " << positionDeviationFromPeriodicOrbit
-              << "\nVelocity deviation from periodic orbit: " << velocityDeviationFromPeriodicOrbit
-              << "\n\nDifferential correction:"               << std::endl;
+//    std::cout << "\nInitial state vector:\n"                  << initialStateVectorInclSTM.block( 0, 0, 6, 1 )
+//              << "\nPosition deviation from periodic orbit: " << positionDeviationFromPeriodicOrbit
+//              << "\nVelocity deviation from periodic orbit: " << velocityDeviationFromPeriodicOrbit
+//              << "\n\nDifferential correction:"               << std::endl;
 
     bool deviationFromPeriodicOrbitRelaxed = false;
 
@@ -102,7 +100,7 @@ Eigen::VectorXd applyDifferentialCorrection(
         orbitalPeriod  = orbitalPeriod + 2.0 * differentialCorrection( 6 ) / 1.0;
 
         std::pair< Eigen::MatrixXd, double > halfPeriodState = propagateOrbitToFinalCondition(
-                    initialStateVectorInclSTM, massParameter, orbitalPeriod / 2.0, 1.0, stateHistory, -1, 0.0 );
+                    initialStateVectorInclSTM, massParameter, integratorSettings, orbitalPeriod / 2.0, 1.0, stateHistory );
         stateVectorInclSTM = halfPeriodState.first;
         currentTime = halfPeriodState.second;
         stateVectorOnly = stateVectorInclSTM.block( 0, 0, 6, 1 );
@@ -121,17 +119,17 @@ Eigen::VectorXd applyDifferentialCorrection(
         }
         numberOfIterations += 1;
 
-        std::cout << "positionDeviationFromPeriodicOrbit: " << positionDeviationFromPeriodicOrbit << std::endl
-                  << "velocityDeviationFromPeriodicOrbit: " << velocityDeviationFromPeriodicOrbit << "\n" << std::endl;
+//        std::cout << "positionDeviationFromPeriodicOrbit: " << positionDeviationFromPeriodicOrbit << std::endl
+//                  << "velocityDeviationFromPeriodicOrbit: " << velocityDeviationFromPeriodicOrbit << "\n" << std::endl;
     }
 
     double jacobiEnergyHalfPeriod       = tudat::gravitation::computeJacobiEnergy(massParameter, stateVectorOnly);
     double jacobiEnergyInitialCondition = tudat::gravitation::computeJacobiEnergy(massParameter, initialStateVectorInclSTM.block( 0, 0, 6, 1 ));
 
-    std::cout << "\nCorrected initial state vector:" << std::endl << initialStateVectorInclSTM.block( 0, 0, 6, 1 )        << std::endl
-              << "\nwith orbital period: "           << orbitalPeriod                                              << std::endl
-              << "||J(0) - J(T/2|| = "               << std::abs(jacobiEnergyInitialCondition - jacobiEnergyHalfPeriod) << std::endl
-              << "||T/2 - t|| = "                    << std::abs(orbitalPeriod/2.0 - currentTime) << "\n"               << std::endl;
+//    std::cout << "\nCorrected initial state vector:" << std::endl << initialStateVectorInclSTM.block( 0, 0, 6, 1 )        << std::endl
+//              << "\nwith orbital period: "           << orbitalPeriod                                              << std::endl
+//              << "||J(0) - J(T/2|| = "               << std::abs(jacobiEnergyInitialCondition - jacobiEnergyHalfPeriod) << std::endl
+//              << "||T/2 - t|| = "                    << std::abs(orbitalPeriod/2.0 - currentTime) << "\n"               << std::endl;
 
     // The output vector consists of:
     // 1. Corrected initial state vector, including orbital period

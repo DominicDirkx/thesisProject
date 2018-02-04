@@ -6,6 +6,7 @@
 #include <Eigen/Core>
 
 #include "Tudat/Basics/basicTypedefs.h"
+#include "Tudat/Mathematics/NumericalIntegrators/createNumericalIntegrator.h"
 
 Eigen::MatrixXd getFullInitialState( const Eigen::Vector6d& initialState );
 
@@ -19,8 +20,10 @@ std::pair< Eigen::MatrixXd, double > propagateOrbit(
         int direction, double initialStepSize = 1.0E-5, double maximumStepSize = 1.0E-4 );
 
 std::pair< Eigen::MatrixXd, double >  propagateOrbitToFinalCondition(
-        const Eigen::MatrixXd fullInitialState, const double massParameter, const double finalTime, int direction,
-        std::map< double, Eigen::Vector6d >& stateHistory, const int saveFrequency = -1, const double initialTime = 0.0 );
+        const Eigen::MatrixXd& fullInitialState, const double massParameter,
+        const boost::shared_ptr< tudat::numerical_integrators::IntegratorSettings< double > > integratorSettings,
+        const double finalTime, int direction,
+        std::map< double, Eigen::Vector6d >& stateHistory );
 
 std::pair< Eigen::MatrixXd, double >  propagateOrbitWithStateTransitionMatrixToFinalCondition(
         const Eigen::MatrixXd fullInitialState, const double massParameter, const double finalTime, int direction,

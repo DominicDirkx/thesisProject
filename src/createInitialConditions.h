@@ -11,6 +11,7 @@
 #include <Eigen/Core>
 
 #include "Tudat/Basics/basicTypedefs.h"
+#include "Tudat/Mathematics/NumericalIntegrators/createNumericalIntegrator.h"
 
 void appendResultsVector(
         const double jacobiEnergy, const double orbitalPeriod, const Eigen::VectorXd& initialStateVector,
@@ -30,6 +31,7 @@ std::pair< Eigen::Vector6d, double > getLibrationPointPeriodicOrbitInitialStateV
 Eigen::MatrixXd correctPeriodicOrbitInitialState(
         const Eigen::Vector6d& initialStateGuess, const double orbitalPeriod, const int orbitNumber,
         const int librationPointNr, std::string orbitType, const double massParameter,
+        const boost::shared_ptr< tudat::numerical_integrators::IntegratorSettings< double > > integratorSettings,
         std::vector< Eigen::VectorXd >& initialConditions,
         std::vector< Eigen::VectorXd >& differentialCorrections,
         const double maxPositionDeviationFromPeriodicOrbit = 1.0e-12, const double maxVelocityDeviationFromPeriodicOrbit = 1.0e-12 );
@@ -50,6 +52,7 @@ double getDefaultArcLength(
 // A
 void createPeriodicOrbitInitialConditions(
         const int librationPointNr, const std::string& orbitType,
+        const boost::shared_ptr< tudat::numerical_integrators::IntegratorSettings< double > > integratorSettings,
         const double massParameter = tudat::gravitation::circular_restricted_three_body_problem::computeMassParameter(
             tudat::celestial_body_constants::EARTH_GRAVITATIONAL_PARAMETER,
             tudat::celestial_body_constants::MOON_GRAVITATIONAL_PARAMETER ),
