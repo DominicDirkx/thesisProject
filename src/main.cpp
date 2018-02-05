@@ -28,10 +28,10 @@
 //  - In correctPeriodicOrbitInitialState function, the appendDifferentialCorrectionResultsVector and appendResultsVector functions
 //  should be changed, so that the output is written to a well organized struct, with clear identifiers for all information.
 //  File output function should be created for consistency with Koen's format.
-//  -  librationPointNr, orbitType, massParameter
+//  -  librationPointNr, orbitType, massParameter -> should be passed as a function that creates the state derivative model.
 //  -  maximumNumberOfInitialConditions: Should be an input parameter to createPeriodicOrbitInitialConditions, as should settings for
 //  continuation
-//  - integrator settings should be an input variable to e.g. createPeriodicOrbitInitialConditions.
+//  DONE: - integrator settings should be an input variable to e.g. createPeriodicOrbitInitialConditions.
 
 double massParameter = tudat::gravitation::circular_restricted_three_body_problem::computeMassParameter( tudat::celestial_body_constants::EARTH_GRAVITATIONAL_PARAMETER, tudat::celestial_body_constants::MOON_GRAVITATIONAL_PARAMETER );
 
@@ -42,20 +42,20 @@ int main (){
     // ================================
 
     double minimumStepSize   = std::numeric_limits<double>::epsilon( ); // 2.22044604925031e-16
-    const double relativeErrorTolerance = 1.0E-12;
+    const double relativeErrorTolerance = 1.0E-13;
     const double absoluteErrorTolerance = 1.0e-20;
 
     boost::shared_ptr< tudat::numerical_integrators::IntegratorSettings< double > > integratorSettings =
             boost::make_shared< tudat::numerical_integrators::RungeKuttaVariableStepSizeSettings< > >
             ( tudat::numerical_integrators::rungeKuttaVariableStepSize, 0.0, 1.0E-5,
-              tudat::numerical_integrators::RungeKuttaCoefficients::rungeKutta87DormandPrince, minimumStepSize, 1.0E-2,
+              tudat::numerical_integrators::RungeKuttaCoefficients::rungeKutta87DormandPrince, minimumStepSize, 1.0E-3,
               relativeErrorTolerance, absoluteErrorTolerance );
     integratorSettings->saveFrequency_ = 1;
 
     #pragma omp parallel num_threads(6)
     {
         #pragma omp for
-        for (unsigned int i=1; i<=6; i++) {
+        for (unsigned int i=3; i<=3; i++) {
             if (i ==1)
             {
                 createPeriodicOrbitInitialConditions(1, "horizontal", integratorSettings );
