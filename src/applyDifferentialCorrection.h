@@ -15,7 +15,7 @@ Eigen::VectorXd applyDifferentialCorrection(
         const boost::shared_ptr< tudat::numerical_integrators::IntegratorSettings< double > > integratorSettings,
         double maxPositionDeviationFromPeriodicOrbit,
         double maxVelocityDeviationFromPeriodicOrbit,
-        const int maxNumberOfIterations = 1000 );
+        const int maxNumberOfIterations = 20 );
 
 
 #endif  // TUDATBUNDLE_APPLYDIFFERENTIALCORRECTION_H

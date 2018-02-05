@@ -1,3 +1,5 @@
+#include <iostream>
+
 #include <Eigen/Core>
 #include <Eigen/Eigenvalues>
 #include <Eigen/QR>

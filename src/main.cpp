@@ -42,20 +42,22 @@ int main (){
     // ================================
 
     double minimumStepSize   = std::numeric_limits<double>::epsilon( ); // 2.22044604925031e-16
-    const double relativeErrorTolerance = 1.0E-13;
-    const double absoluteErrorTolerance = 1.0e-20;
+    double maximumStepSize   = 100.0;//std::numeric_limits<double>::infinity( ); // 2.22044604925031e-16
+
+    const double relativeErrorTolerance = 1.0E-10;
+    const double absoluteErrorTolerance = 1.0E-14;
 
     boost::shared_ptr< tudat::numerical_integrators::IntegratorSettings< double > > integratorSettings =
             boost::make_shared< tudat::numerical_integrators::RungeKuttaVariableStepSizeSettings< > >
             ( tudat::numerical_integrators::rungeKuttaVariableStepSize, 0.0, 1.0E-5,
-              tudat::numerical_integrators::RungeKuttaCoefficients::rungeKutta87DormandPrince, minimumStepSize, 1.0E-3,
+              tudat::numerical_integrators::RungeKuttaCoefficients::rungeKutta87DormandPrince, minimumStepSize, maximumStepSize,
               relativeErrorTolerance, absoluteErrorTolerance );
     integratorSettings->saveFrequency_ = 1;
 
     #pragma omp parallel num_threads(6)
     {
         #pragma omp for
-        for (unsigned int i=3; i<=3; i++) {
+        for (unsigned int i=1; i<=6; i++) {
             if (i ==1)
             {
                 createPeriodicOrbitInitialConditions(1, "horizontal", integratorSettings );

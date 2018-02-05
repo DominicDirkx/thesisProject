@@ -1,5 +1,7 @@
 #include <fstream>
 #include <iomanip>
+#include <chrono>
+#include <ctime>
 
 #include <Eigen/Core>
 #include <Eigen/Eigenvalues>
@@ -323,7 +325,7 @@ double getDefaultArcLength(
         const double distanceIncrement,
         const Eigen::Vector6d& currentState )
 {
-    return distanceIncrement / currentState.segment( 0, 3 ).norm( );
+    return std::max( distanceIncrement / currentState.segment( 0, 3 ).norm( ), 0.01 );
 }
 
 void createPeriodicOrbitInitialConditionsFromExistingData(
@@ -350,9 +352,10 @@ void createPeriodicOrbitInitialConditionsFromExistingData(
     double orbitalPeriod  = 0.0, periodIncrement = 0.0, pseudoArcLengthCorrection = 0.0;
     bool continueNumericalContinuation = true;
     Eigen::Vector6d stateIncrement;
+
+    std::clock_t c_start = std::clock();
     while( ( numberOfInitialConditions < maximumNumberOfInitialConditions ) && continueNumericalContinuation)
     {
-        std::cout<<"Generating initial state "<<numberOfInitialConditions<<" "<<librationPointNr<<" "<<orbitType<<std::endl;
         // Determine increments to state and time
         stateIncrement = initialConditions[ initialConditions.size( ) - 1 ].segment( 2, 6 ) -
                 initialConditions[ initialConditions.size( ) - 2 ].segment( 2, 6 );
@@ -361,8 +364,8 @@ void createPeriodicOrbitInitialConditionsFromExistingData(
         pseudoArcLengthCorrection =
                 pseudoArcLengthFunction( stateIncrement );
 
-        std::cout<<"Pseudo-arc length "<<pseudoArcLengthCorrection<<" "<<orbitalPeriod<<" "<<periodIncrement<<" "<<
-                   stateIncrement.transpose( )<<std::endl;
+//        std::cout<<"Pseudo-arc length "<<pseudoArcLengthCorrection<<" "<<orbitalPeriod<<" "<<periodIncrement<<" "<<
+//                   stateIncrement.transpose( )<<std::endl;
 
         // Apply numerical continuation
         initialStateVector = initialConditions[ initialConditions.size( ) - 1 ].segment( 2, 6 ) +
@@ -379,6 +382,10 @@ void createPeriodicOrbitInitialConditionsFromExistingData(
 
         numberOfInitialConditions += 1;
     }
+    std::clock_t c_end = std::clock();
+
+    std::cout<<"Generating initial state, "<<numberOfInitialConditions<<" orbits at: L"<<librationPointNr<<", "<<orbitType<<
+               " orbit. Total generation time = "<< 1000.0 * (c_end-c_start) / CLOCKS_PER_SEC <<" milliseconds "<<std::endl;
 
     writeFinalResultsToFiles( librationPointNr, orbitType, initialConditions, differentialCorrections );
 }
@@ -393,7 +400,7 @@ void createPeriodicOrbitInitialConditions(
         const boost::function< double( const Eigen::Vector6d& ) > pseudoArcLengthFunction )
 
 {
-    std::cout << "\nCreate initial conditions:\n" << std::endl;
+    //std::cout << "\nCreate initial conditions:\n" << std::endl;
 
     // Set output maximum precision
     std::cout.precision(std::numeric_limits<double>::digits10);

@@ -17,7 +17,7 @@
 std::pair< Eigen::Vector6d, double >  richardsonApproximationLibrationPointPeriodicOrbit(std::string orbitType, int librationPointNr,
                                                   double amplitude, double n )
 {
-    std::cout << "\nCreate initial conditions:\n" << std::endl;
+    //std::cout << "\nCreate initial conditions:\n" << std::endl;
 
     // Set output precision and clear screen.
     std::cout.precision(14);
@@ -128,7 +128,7 @@ std::pair< Eigen::Vector6d, double >  richardsonApproximationLibrationPointPerio
         Ax = pow(((-delta - l2 * pow(Az, 2.0)) / l1), 0.5);
     }
 
-    std::cout << "Ax = " << Ax << ", Az =  = " << Az << std::endl;
+    //std::cout << "Ax = " << Ax << ", Az =  = " << Az << std::endl;
 
     double omega1 = 0.0;
     double omega2 = s1 * pow(Ax, 2.0) + s2 * pow(Az, 2.0);

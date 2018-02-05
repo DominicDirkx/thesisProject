@@ -122,6 +122,7 @@ Eigen::VectorXd applyDifferentialCorrection(
 //        std::cout << "positionDeviationFromPeriodicOrbit: " << positionDeviationFromPeriodicOrbit << std::endl
 //                  << "velocityDeviationFromPeriodicOrbit: " << velocityDeviationFromPeriodicOrbit << "\n" << std::endl;
     }
+//    std::cout<<"Number of iterations: "<<numberOfIterations<<std::endl;
 
     double jacobiEnergyHalfPeriod       = tudat::gravitation::computeJacobiEnergy(massParameter, stateVectorOnly);
     double jacobiEnergyInitialCondition = tudat::gravitation::computeJacobiEnergy(massParameter, initialStateVectorInclSTM.block( 0, 0, 6, 1 ));
