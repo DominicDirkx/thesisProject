@@ -21,6 +21,12 @@ void appendDifferentialCorrectionResultsVector(
         const double jacobiEnergyHalfPeriod,  const Eigen::VectorXd& differentialCorrectionResult,
         std::vector< Eigen::VectorXd >& differentialCorrections );
 
+void writeFinalResultsToFiles( const int librationPointNr, const std::string orbitType,
+                               std::vector< Eigen::VectorXd > initialConditions,
+                               std::vector< Eigen::VectorXd > differentialCorrections );
+
+
+
 double getEarthMoonAmplitude( const int librationPointNr, const std::string& orbitType, const int guessIteration );
 
 std::pair< Eigen::Vector6d, double > getLibrationPointPeriodicOrbitInitialStateVectorGuess(
@@ -28,6 +34,7 @@ std::pair< Eigen::Vector6d, double > getLibrationPointPeriodicOrbitInitialStateV
         const boost::function< double( const int librationPointNr, const std::string& orbitType, const int guessIteration ) > getAmplitude =
         getEarthMoonAmplitude );
 
+//! Apply differential correction, and save results for periodic orbit
 Eigen::MatrixXd correctPeriodicOrbitInitialState(
         const Eigen::Vector6d& initialStateGuess, const double orbitalPeriod, const int orbitNumber,
         const int librationPointNr, std::string orbitType, const double massParameter,
@@ -36,15 +43,11 @@ Eigen::MatrixXd correctPeriodicOrbitInitialState(
         std::vector< Eigen::VectorXd >& differentialCorrections,
         const double maxPositionDeviationFromPeriodicOrbit = 1.0e-12, const double maxVelocityDeviationFromPeriodicOrbit = 1.0e-12 );
 
-void writeFinalResultsToFiles( const int librationPointNr, const std::string orbitType,
-                               std::vector< Eigen::VectorXd > initialConditions,
-                               std::vector< Eigen::VectorXd > differentialCorrections );
 
 bool checkTermination( const std::vector< Eigen::VectorXd >& differentialCorrections,
                        const Eigen::MatrixXd& stateVectorInclSTM, const std::string orbitType, const int librationPointNr,
                        const double maxEigenvalueDeviation = 1.0e-3 );
 
-// A
 double getDefaultArcLength(
         const double distanceIncrement,
         const Eigen::Vector6d& currentState );

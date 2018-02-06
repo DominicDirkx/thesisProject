@@ -99,13 +99,13 @@ std::pair< Eigen::MatrixXd, double > propagateOrbit(
     return std::make_pair( outputState, currentTime );
 }
 
-std::pair< Eigen::MatrixXd, double >  propagateOrbitToFinalCondition(
-        const Eigen::MatrixXd& fullInitialState, const double massParameter,
+std::pair< Eigen::Matrix< double, 6, 7 >, double >  propagateOrbitToFinalCondition(
+        const Eigen::Matrix< double, 6, 7 >& fullInitialState, const double massParameter,
         const boost::shared_ptr< numerical_integrators::IntegratorSettings< double > > integratorSettings,
         const double finalTime, int direction,
         std::map< double, Eigen::Vector6d >& stateHistory )
 {
-    std::map< double, Eigen::MatrixXd > fullStateHistory;
+    std::map< double, Eigen::Matrix< double, 6, 7 > > fullStateHistory;
 
     std::map< double, double > cummulativeComputationTimeHistory;
     std::map< double, Eigen::VectorXd > dependentVariableHistory;
@@ -114,11 +114,11 @@ std::pair< Eigen::MatrixXd, double >  propagateOrbitToFinalCondition(
     // Create integrator to be used for propagating.
     boost::shared_ptr< propagators::StateDerivativeCircularRestrictedThreeBodyProblem > cr3bpStateDerivative =
             boost::make_shared< propagators::StateDerivativeCircularRestrictedThreeBodyProblem  >( massParameter );
-    boost::function< Eigen::MatrixXd( const double, const Eigen::MatrixXd& ) > stateDerivativeFunction =
+    boost::function< Eigen::Matrix< double, 6, 7 >( const double, const Eigen::Matrix< double, 6, 7 >& ) > stateDerivativeFunction =
             boost::bind( &propagators::StateDerivativeCircularRestrictedThreeBodyProblem::computeStateDerivativeWithStateTransitionMatrix,
                                  cr3bpStateDerivative, _1, _2 );
-    boost::shared_ptr< numerical_integrators::NumericalIntegrator< double, Eigen::MatrixXd > > orbitIntegrator =
-            numerical_integrators::createIntegrator< double, Eigen::MatrixXd >(
+    boost::shared_ptr< numerical_integrators::NumericalIntegrator< double, Eigen::Matrix< double, 6, 7 > > > orbitIntegrator =
+            numerical_integrators::createIntegrator< double, Eigen::Matrix< double, 6, 7 > >(
                stateDerivativeFunction , fullInitialState, integratorSettings );
 
     double initialTimeStep = integratorSettings->initialTimeStep_;
@@ -127,12 +127,12 @@ std::pair< Eigen::MatrixXd, double >  propagateOrbitToFinalCondition(
                 boost::make_shared< propagators::PropagationTimeTerminationSettings >(
                     finalTime, true ), simulation_setup::NamedBodyMap( ), initialTimeStep );
 
-    propagators::integrateEquationsFromIntegrator< Eigen::MatrixXd, double >(
+    propagators::integrateEquationsFromIntegrator< Eigen::Matrix< double, 6, 7 >, double >(
                 orbitIntegrator, initialTimeStep, propagationTerminationCondition, fullStateHistory,
                 dependentVariableHistory, cummulativeComputationTimeHistory, dependentVariableFunction,
                 integratorSettings->saveFrequency_ );
 
-    for( std::map< double, Eigen::MatrixXd >::const_iterator stateIterator = fullStateHistory.begin( );
+    for( std::map< double, Eigen::Matrix< double, 6, 7 > >::const_iterator stateIterator = fullStateHistory.begin( );
          stateIterator != fullStateHistory.end( ); stateIterator++ )
     {
         stateHistory[ stateIterator->first ] = stateIterator->second.block( 0, 0, 6, 1 );

@@ -60,11 +60,11 @@ int main (){
         for (unsigned int i=1; i<=6; i++) {
             if (i ==1)
             {
-                createPeriodicOrbitInitialConditions(1, "horizontal", integratorSettings );
+                createPeriodicOrbitInitialConditions( 1, "horizontal", integratorSettings );
             }
             if (i ==2)
             {
-                createPeriodicOrbitInitialConditions(2, "horizontal", integratorSettings );
+                createPeriodicOrbitInitialConditions( 2, "horizontal", integratorSettings );
             }
             if (i ==3)
             {

@@ -297,6 +297,7 @@ bool checkTermination( const std::vector< Eigen::VectorXd >& differentialCorrect
     if( stateVectorInclSTM != stateVectorInclSTM )
     {
         continueNumericalContinuation = false;
+        std::cout << "\n\nNUMERICAL CONTINUATION STOPPED DUE TO NaN STATE TRANSITION MATROX \n\n" << std::endl;
     }
     else if ( differentialCorrections.at( differentialCorrections.size( ) - 1 ).segment(0, 6) == Eigen::VectorXd::Zero(6) )
     {
