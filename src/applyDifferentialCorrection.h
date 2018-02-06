@@ -8,14 +8,13 @@
 
 #include "Tudat/Mathematics/NumericalIntegrators/createNumericalIntegrator.h"
 
+#include "cr3bpPeriodicOrbits.h"
+
 Eigen::VectorXd applyDifferentialCorrection(
-        const int librationPointNr, const std::string& orbitType,
         const Eigen::VectorXd& initialStateVector,
-        double orbitalPeriod, const double massParameter,
-        const boost::shared_ptr< tudat::numerical_integrators::IntegratorSettings< double > > integratorSettings,
-        double maxPositionDeviationFromPeriodicOrbit,
-        double maxVelocityDeviationFromPeriodicOrbit,
-        const int maxNumberOfIterations = 20 );
+        double orbitalPeriod,
+        const boost::shared_ptr< tudat::cr3bp::CR3BPPeriodicOrbitModel > periodicOrbitModel,
+        const boost::shared_ptr< tudat::numerical_integrators::IntegratorSettings< double > > integratorSettings );
 
 
 #endif  // TUDATBUNDLE_APPLYDIFFERENTIALCORRECTION_H

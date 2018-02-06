@@ -20,10 +20,10 @@ std::pair< Eigen::MatrixXd, double > propagateOrbit(
         int direction, double initialStepSize = 1.0E-5, double maximumStepSize = 1.0E-4 );
 
 std::pair< Eigen::Matrix< double, 6, 7 >, double >  propagateOrbitToFinalCondition(
-        const Eigen::Matrix< double, 6, 7 >& fullInitialState, const double massParameter,
+        const Eigen::Matrix< double, 6, 7 >& fullInitialState,
+        boost::function< Eigen::Matrix< double, 6, 7 >( const double, const Eigen::Matrix< double, 6, 7 >& ) > stateDerivativeFunction,
         const boost::shared_ptr< tudat::numerical_integrators::IntegratorSettings< double > > integratorSettings,
-        const double finalTime, int direction,
-        std::map< double, Eigen::Vector6d >& stateHistory );
+        const double finalTime, std::map< double, Eigen::Vector6d >& stateHistory );
 
 std::pair< Eigen::MatrixXd, double >  propagateOrbitWithStateTransitionMatrixToFinalCondition(
         const Eigen::MatrixXd fullInitialState, const double massParameter, const double finalTime, int direction,

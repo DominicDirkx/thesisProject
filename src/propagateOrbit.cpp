@@ -100,10 +100,10 @@ std::pair< Eigen::MatrixXd, double > propagateOrbit(
 }
 
 std::pair< Eigen::Matrix< double, 6, 7 >, double >  propagateOrbitToFinalCondition(
-        const Eigen::Matrix< double, 6, 7 >& fullInitialState, const double massParameter,
+        const Eigen::Matrix< double, 6, 7 >& fullInitialState,
+        boost::function< Eigen::Matrix< double, 6, 7 >( const double, const Eigen::Matrix< double, 6, 7 >& ) > stateDerivativeFunction,
         const boost::shared_ptr< numerical_integrators::IntegratorSettings< double > > integratorSettings,
-        const double finalTime, int direction,
-        std::map< double, Eigen::Vector6d >& stateHistory )
+        const double finalTime, std::map< double, Eigen::Vector6d >& stateHistory )
 {
     std::map< double, Eigen::Matrix< double, 6, 7 > > fullStateHistory;
 
@@ -112,11 +112,6 @@ std::pair< Eigen::Matrix< double, 6, 7 >, double >  propagateOrbitToFinalConditi
     boost::function< Eigen::VectorXd( ) > dependentVariableFunction;
 
     // Create integrator to be used for propagating.
-    boost::shared_ptr< propagators::StateDerivativeCircularRestrictedThreeBodyProblem > cr3bpStateDerivative =
-            boost::make_shared< propagators::StateDerivativeCircularRestrictedThreeBodyProblem  >( massParameter );
-    boost::function< Eigen::Matrix< double, 6, 7 >( const double, const Eigen::Matrix< double, 6, 7 >& ) > stateDerivativeFunction =
-            boost::bind( &propagators::StateDerivativeCircularRestrictedThreeBodyProblem::computeStateDerivativeWithStateTransitionMatrix,
-                                 cr3bpStateDerivative, _1, _2 );
     boost::shared_ptr< numerical_integrators::NumericalIntegrator< double, Eigen::Matrix< double, 6, 7 > > > orbitIntegrator =
             numerical_integrators::createIntegrator< double, Eigen::Matrix< double, 6, 7 > >(
                stateDerivativeFunction , fullInitialState, integratorSettings );
@@ -139,56 +134,6 @@ std::pair< Eigen::Matrix< double, 6, 7 >, double >  propagateOrbitToFinalConditi
     }
 
     return std::make_pair( fullStateHistory.rbegin( )->second, fullStateHistory.rbegin( )->first );
-
-//    if( saveFrequency >= 0 )
-//    {
-//        stateHistory[ initialTime ] = fullInitialState.block( 0, 0, 6, 1 );
-//    }
-
-//    // Perform first integration step
-//    std::pair< Eigen::MatrixXd, double > previousState;
-//    std::pair< Eigen::MatrixXd, double > currentState;
-//    currentState = propagateOrbit( fullInitialState, massParameter, initialTime, direction, 1.0E-5, 1.0E-5 );
-//    double currentTime = currentState.second;
-
-//    int stepCounter = 1;
-//    // Perform integration steps until end of half orbital period
-//    for (int i = 5; i <= 12; i++)
-//    {
-
-//        double initialStepSize = pow(10,(static_cast<float>(-i)));
-//        double maximumStepSize = initialStepSize;
-
-//        while (currentTime <= finalTime )
-//        {
-//            // Write every nth integration step to file.
-//            if ( saveFrequency > 0 && ( stepCounter % saveFrequency == 0 ) )
-//            {
-//                stateHistory[ currentTime ] = currentState.first.block( 0, 0, 6, 1 );
-//            }
-
-//            currentTime = currentState.second;
-//            previousState = currentState;
-//            currentState = propagateOrbit(currentState.first, massParameter, currentTime, 1, initialStepSize, maximumStepSize);
-
-//            stepCounter++;
-
-//            if (currentState.second > finalTime )
-//            {
-//                currentState = previousState;
-//                currentTime = currentState.second;
-//                break;
-//            }
-//        }
-//    }
-
-//    // Add final state after minimizing overshoot
-//    if ( saveFrequency > 0 )
-//    {
-//        stateHistory[ currentTime ] = currentState.first.block( 0, 0, 6, 1 );
-//    }
-
-//    return currentState;
 }
 
 std::pair< Eigen::MatrixXd, double >  propagateOrbitWithStateTransitionMatrixToFinalCondition(

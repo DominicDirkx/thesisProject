@@ -229,6 +229,7 @@ list(APPEND TUDAT_APPLICATION_ESTIMATION_LIBRARIES tudat_simulation_setup tudat_
          "${SRCROOT}/src/propagateOrbit.cpp"
          "${SRCROOT}/src/richardsonThirdOrderApproximation.cpp"
          "${SRCROOT}/src/stateDerivativeModel.cpp"
+         "${SRCROOT}/src/cr3bpPeriodicOrbits.cpp"
          )
 
  # Set the header files.
@@ -242,6 +243,7 @@ list(APPEND TUDAT_APPLICATION_ESTIMATION_LIBRARIES tudat_simulation_setup tudat_
          "${SRCROOT}/src/propagateOrbit.h"
          "${SRCROOT}/src/richardsonThirdOrderApproximation.h"
          "${SRCROOT}/src/stateDerivativeModel.h"
+         "${SRCROOT}/src/cr3bpPeriodicOrbits.h"
          )
 
  # Add static libraries.

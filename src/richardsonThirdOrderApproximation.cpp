@@ -12,9 +12,11 @@
 #include "functions/librationPointLocationFunction.h"
 #include "functions/librationPointLocationFunction1.h"
 #include "functions/librationPointLocationFunction2.h"
-#include "propagateOrbit.h"
 
-std::pair< Eigen::Vector6d, double >  richardsonApproximationLibrationPointPeriodicOrbit(std::string orbitType, int librationPointNr,
+#include "richardsonThirdOrderApproximation.h"
+
+std::pair< Eigen::Vector6d, double >  richardsonApproximationLibrationPointPeriodicOrbit(
+        tudat::cr3bp::CR3BPPeriodicOrbitTypes orbitType, int librationPointNr,
                                                   double amplitude, double n )
 {
     //std::cout << "\nCreate initial conditions:\n" << std::endl;
@@ -117,13 +119,13 @@ std::pair< Eigen::Vector6d, double >  richardsonApproximationLibrationPointPerio
     double l1  = a1 + 2.0 * pow(lambda, 2.0) * s1;
     double l2  = a2 + 2.0 * pow(lambda, 2.0) * s2;
 
-    if (orbitType == "horizontal"){
+    if (orbitType == tudat::cr3bp::horizontal_lyapunov_orbit ){
         Ax = amplitude;
         Az = 0.0;
-    } if (orbitType == "vertical"){
+    } if (orbitType == tudat::cr3bp::vertical_lyapunov_orbit ){
         Ax = 0.0;
         Az = amplitude;
-    } if (orbitType == "halo"){
+    } if (orbitType == tudat::cr3bp::halo_orbit ){
         Az = amplitude;
         Ax = pow(((-delta - l2 * pow(Az, 2.0)) / l1), 0.5);
     }
