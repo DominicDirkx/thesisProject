@@ -76,13 +76,15 @@ public:
     Eigen::VectorXd computeDifferentialCorrection(
             const Eigen::Matrix6d& stmPartOfStateVectorInMatrixForm,
             const Eigen::Vector6d& cartesianState,
-            const double currentTime );
+            const double currentTime,
+            const int numberOfIterations );
 
 
     bool terminateNumericalContinuation(
             const Eigen::Matrix6d& stmPartOfStateVectorInMatrixForm,
             const Eigen::Vector6d& cartesianState,
-            const double currentTime );
+            const double currentTime,
+            const int numberOfOrbitsGenerated );
 
     bool continueDifferentialCorrection(
             const Eigen::Vector6d stateVector, const int numberOfIterations );
@@ -104,7 +106,7 @@ public:
 
 private:
 
-    bool checkMonodromyEigenvalues( const Eigen::Matrix6d &monodromyMatrix, const bool moduleOneInsteadOfRealOne );
+    bool checkMonodromyEigenvalues( const Eigen::Matrix6d &monodromyMatrix );
 
 
     boost::shared_ptr< propagators::StateDerivativeCircularRestrictedThreeBodyProblem  > stateDerivativeModel_;
@@ -117,6 +119,8 @@ private:
 
 
     int maximumNumberOfDifferentialCorrectionIterations_;
+
+    int maximumNumberOfNumericalContinuations_;
 
     double maximumAllowedPositionDeviationFromPeriodicOrbit_;
 

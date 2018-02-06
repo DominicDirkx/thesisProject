@@ -14,7 +14,8 @@ Eigen::VectorXd applyDifferentialCorrection(
         const Eigen::VectorXd& initialStateVector,
         double orbitalPeriod,
         const boost::shared_ptr< tudat::cr3bp::CR3BPPeriodicOrbitModel > periodicOrbitModel,
-        const boost::shared_ptr< tudat::numerical_integrators::IntegratorSettings< double > > integratorSettings );
+        const boost::shared_ptr< tudat::numerical_integrators::IntegratorSettings< double > > integratorSettings,
+        const int currentIteration );
 
 
 #endif  // TUDATBUNDLE_APPLYDIFFERENTIALCORRECTION_H

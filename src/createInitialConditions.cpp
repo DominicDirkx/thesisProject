@@ -115,7 +115,7 @@ Eigen::MatrixXd correctPeriodicOrbitInitialState(
 
     // Correct state vector guess
     Eigen::VectorXd differentialCorrectionResult = applyDifferentialCorrection(
-                initialStateVector, orbitalPeriod, periodicOrbitModel, integratorSettings );
+                initialStateVector, orbitalPeriod, periodicOrbitModel, integratorSettings, orbitNumber );
     initialStateVector = differentialCorrectionResult.segment( 0, 6 );
     orbitalPeriod = differentialCorrectionResult( 6 );
 
@@ -211,6 +211,7 @@ double getDefaultArcLength(
 
 void createPeriodicOrbitInitialConditionsFromExistingData(
         const boost::shared_ptr< tudat::numerical_integrators::IntegratorSettings< double > > integratorSettings,
+        const boost::shared_ptr< tudat::cr3bp::CR3BPPeriodicOrbitModel > periodicOrbitModel,
         std::vector< Eigen::VectorXd >& initialConditions,
         std::vector< Eigen::VectorXd >& differentialCorrections,
         const boost::function< double( const Eigen::Vector6d& ) > pseudoArcLengthFunction )
@@ -246,21 +247,20 @@ void createPeriodicOrbitInitialConditionsFromExistingData(
         orbitalPeriod = initialConditions[ initialConditions.size( ) - 1 ]( 1 ) +
                 periodIncrement * pseudoArcLengthCorrection;
         stateVectorInclSTM = correctPeriodicOrbitInitialState(
-                    initialStateVector, orbitalPeriod, numberOfInitialConditions,
-                    librationPointNr, orbitType, massParameter, integratorSettings, initialConditions, differentialCorrections,
-                    maxPositionDeviationFromPeriodicOrbit, maxVelocityDeviationFromPeriodicOrbit );
+                    initialStateVector, orbitalPeriod, numberOfInitialConditions, periodicOrbitModel,
+                    integratorSettings, initialConditions, differentialCorrections );
 
-        continueNumericalContinuation = checkTermination(
-                    differentialCorrections, stateVectorInclSTM, orbitType, librationPointNr, maxEigenvalueDeviation );
+        continueNumericalContinuation =
+                periodicOrbitModel->terminateNumericalContinuation(
+                    stateVectorInclSTM.block( 1, 0, 6, 6 ), stateVectorInclSTM.block( 0, 0, 6, 1 ), orbitalPeriod, numberOfInitialConditions );
 
         numberOfInitialConditions += 1;
     }
     std::clock_t c_end = std::clock();
 
-    std::cout<<"Generating initial state, "<<numberOfInitialConditions<<" orbits at: L"<<librationPointNr<<", "<<orbitType<<
-               " orbit. Total generation time = "<< 1000.0 * (c_end-c_start) / CLOCKS_PER_SEC <<" milliseconds "<<std::endl;
+    std::cout<<"Generating initial state, "<<numberOfInitialConditions<<" orbits at. Total generation time = "<< 1000.0 * (c_end-c_start) / CLOCKS_PER_SEC <<" milliseconds "<<std::endl;
 
-    writeFinalResultsToFiles( librationPointNr, orbitType, initialConditions, differentialCorrections );
+    //writeFinalResultsToFiles( librationPointNr, orbitType, initialConditions, differentialCorrections );
 }
 
 void createPeriodicOrbitInitialConditions(
@@ -281,18 +281,18 @@ void createPeriodicOrbitInitialConditions(
 
     correctPeriodicOrbitInitialState(
                 richardsonThirdOrderApproximationResultIteration1.first, richardsonThirdOrderApproximationResultIteration1.second, 0,
-                 integratorSettings, periodicOrbitModel, initialConditions, differentialCorrections );
+                 periodicOrbitModel, integratorSettings, initialConditions, differentialCorrections );
     correctPeriodicOrbitInitialState(
                 richardsonThirdOrderApproximationResultIteration2.first, richardsonThirdOrderApproximationResultIteration2.second, 1,
-                integratorSettings, periodicOrbitModel, initialConditions, differentialCorrections );
+                periodicOrbitModel, integratorSettings, initialConditions, differentialCorrections );
 
 
     createPeriodicOrbitInitialConditionsFromExistingData(
-                librationPointNr, orbitType, integratorSettings,
+                integratorSettings,
+                periodicOrbitModel,
                 initialConditions,
                 differentialCorrections,
-                massParameter, maxPositionDeviationFromPeriodicOrbit,
-                maxVelocityDeviationFromPeriodicOrbit, maxEigenvalueDeviation, pseudoArcLengthFunction );
+                pseudoArcLengthFunction );
 
 }
 

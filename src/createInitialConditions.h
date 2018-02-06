@@ -44,17 +44,11 @@ double getDefaultArcLength(
         const Eigen::Vector6d& currentState );
 
 void createPeriodicOrbitInitialConditionsFromExistingData(
-        const int librationPointNr, const std::string& orbitType,
         const boost::shared_ptr< tudat::numerical_integrators::IntegratorSettings< double > > integratorSettings,
+        const boost::shared_ptr< tudat::cr3bp::CR3BPPeriodicOrbitModel > periodicOrbitModel,
         std::vector< Eigen::VectorXd >& initialConditions,
         std::vector< Eigen::VectorXd >& differentialCorrections,
-        const double massParameter = tudat::gravitation::circular_restricted_three_body_problem::computeMassParameter(
-            tudat::celestial_body_constants::EARTH_GRAVITATIONAL_PARAMETER,
-            tudat::celestial_body_constants::MOON_GRAVITATIONAL_PARAMETER ),
-        const double maxPositionDeviationFromPeriodicOrbit = 1.0e-12, const double maxVelocityDeviationFromPeriodicOrbit = 1.0e-12,
-        const double maxEigenvalueDeviation = 1.0e-3,
-        const boost::function< double( const Eigen::Vector6d& ) > pseudoArcLengthFunction =
-        boost::bind( &getDefaultArcLength, 1.0E-4, _1 ) );
+        const boost::function< double( const Eigen::Vector6d& ) > pseudoArcLengthFunction );
 
 void createPeriodicOrbitInitialConditions(
         const boost::shared_ptr< tudat::numerical_integrators::IntegratorSettings< double > > integratorSettings,

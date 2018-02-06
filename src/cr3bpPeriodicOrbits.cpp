@@ -1,5 +1,8 @@
+
 #include <boost/shared_ptr.hpp>
 #include <boost/make_shared.hpp>
+
+#include <Eigen/Eigenvalues>
 
 #include "Tudat/Mathematics/BasicMathematics/mathematicalConstants.h"
 
@@ -159,7 +162,8 @@ CR3BPPeriodicOrbitModel::CR3BPPeriodicOrbitModel(
 Eigen::VectorXd CR3BPPeriodicOrbitModel::computeDifferentialCorrection(
         const Eigen::Matrix6d& stmPartOfStateVectorInMatrixForm,
         const Eigen::Vector6d& cartesianState,
-        const double currentTime )
+        const double currentTime,
+        const int currentIteration )
 {
     Eigen::Vector7d differentialCorrection;
     Eigen::Vector3d corrections;
@@ -169,11 +173,17 @@ Eigen::VectorXd CR3BPPeriodicOrbitModel::computeDifferentialCorrection(
     // Compute the accelerations and velocities (in X- and Z-direction) on the spacecraft and put them in a 2x1 vector.
     Eigen::VectorXd cartesianAccelerations = stateDerivativeModel_->computeStateDerivative( currentTime, cartesianState );
 
+    bool xPositionFixed = false;
+    if ( currentIteration > 10 && orbitType_ == axial_orbit && librationPointNumber_ == 2)
+    {
+        xPositionFixed = true;
+    }
+
     // If type is axial, the desired state vector has the form [x, 0, 0, 0, ydot, zdot] and requires a differential correction for {x, ydot, T/2}
     if (orbitType_== axial_orbit )
     {
         // Check which deviation is larger: x-velocity or z-position.
-        if ( std::abs(cartesianState(2)) < std::abs(cartesianState(3)) and !xPositionFixed )
+        if ( std::abs(cartesianState(2)) < std::abs(cartesianState(3)) && !xPositionFixed )
         {
             // Correction on {x, ydot, T/2} for constant {zdot}
 
@@ -274,7 +284,8 @@ Eigen::VectorXd CR3BPPeriodicOrbitModel::computeDifferentialCorrection(
 bool CR3BPPeriodicOrbitModel::terminateNumericalContinuation(
         const Eigen::Matrix6d& stmPartOfStateVectorInMatrixForm,
         const Eigen::Vector6d& cartesianState,
-        const double currentTime )
+        const double currentTime,
+        const int numberOfOrbitsGenerated  )
 {
     // Check termination conditions
     bool continueNumericalContinuation = true;
@@ -283,7 +294,7 @@ bool CR3BPPeriodicOrbitModel::terminateNumericalContinuation(
         continueNumericalContinuation = false;
         std::cout << "\n\nNUMERICAL CONTINUATION STOPPED DUE TO NaN STATE TRANSITION MATROX \n\n" << std::endl;
     }
-    else if ( differentialCorrections.at( differentialCorrections.size( ) - 1 ).segment(0, 6) == Eigen::VectorXd::Zero(6) )
+    else if ( numberOfOrbitsGenerated >= maximumNumberOfNumericalContinuations_ )
     {
         continueNumericalContinuation = false;
         std::cout << "\n\nNUMERICAL CONTINUATION STOPPED DUE TO EXCEEDING MAXIMUM NUMBER OF ITERATIONS\n\n" << std::endl;
@@ -333,7 +344,7 @@ bool CR3BPPeriodicOrbitModel::continueDifferentialCorrection(
         velocityDeviationFromPeriodicOrbit = sqrt(pow(stateVector(3), 2) + pow(stateVector(5), 2));
     }
 
-    return std::make_pair( ( positionDeviationFromPeriodicOrbit > maximumPositionDeviationToUse ) ||
+    return( ( positionDeviationFromPeriodicOrbit > maximumPositionDeviationToUse ) ||
                            ( velocityDeviationFromPeriodicOrbit > maximumVelocityDeviationToUse ) );
 }
 
@@ -358,12 +369,12 @@ bool CR3BPPeriodicOrbitModel::checkMonodromyEigenvalues( const Eigen::Matrix6d &
     // Reshape the STM for one period to matrix form and compute the eigenvalues
     Eigen::EigenSolver<Eigen::Matrix6d> eig( monodromyMatrix );
 
-    // Determine whether the monodromy matrix contains at least one eigenvalue of real one within the maxEigenvalueDeviation
+    // Determine whether the monodromy matrix contains at least one eigenvalue of real one within the maximumAllowedEigenvalueDeviation_
     for (int i = 0; i <= 5; i++)
     {
-        if (std::abs(eig.eigenvalues().imag()(i)) < maxEigenvalueDeviation)
+        if (std::abs(eig.eigenvalues().imag()(i)) < maximumAllowedEigenvalueDeviation_)
         {
-            if (std::abs(eig.eigenvalues().real()(i) - 1.0) < maxEigenvalueDeviation)
+            if (std::abs(eig.eigenvalues().real()(i) - 1.0) < maximumAllowedEigenvalueDeviation_)
             {
                 eigenvalueRealOne = true;
             }
@@ -375,7 +386,7 @@ bool CR3BPPeriodicOrbitModel::checkMonodromyEigenvalues( const Eigen::Matrix6d &
     {
         for (int i = 0; i <= 5; i++)
         {
-            if (std::abs(std::abs(eig.eigenvalues()(i)) - 1.0 ) < maxEigenvalueDeviation)
+            if (std::abs(std::abs(eig.eigenvalues()(i)) - 1.0 ) < maximumAllowedEigenvalueDeviation_)
             {
                 eigenvalueRealOne = true;
             }
@@ -385,7 +396,6 @@ bool CR3BPPeriodicOrbitModel::checkMonodromyEigenvalues( const Eigen::Matrix6d &
     return eigenvalueRealOne;
 }
 
-}
 }
 
 }

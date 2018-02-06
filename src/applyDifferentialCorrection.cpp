@@ -19,7 +19,8 @@ Eigen::VectorXd applyDifferentialCorrection(
         const Eigen::VectorXd& initialStateVector,
         double orbitalPeriod,
         const boost::shared_ptr< tudat::cr3bp::CR3BPPeriodicOrbitModel > periodicOrbitModel,
-        const boost::shared_ptr< tudat::numerical_integrators::IntegratorSettings< double > > integratorSettings )
+        const boost::shared_ptr< tudat::numerical_integrators::IntegratorSettings< double > > integratorSettings,
+        const int currentIteration )
 {
     Eigen::MatrixXd initialStateVectorInclSTM = Eigen::MatrixXd::Zero( 6, 7 );
 
@@ -46,7 +47,7 @@ Eigen::VectorXd applyDifferentialCorrection(
     {
 
         differentialCorrection = periodicOrbitModel->computeDifferentialCorrection(
-                   stateVectorInclSTM.block( 0, 1, 6, 6 ), stateVectorOnly, currentTime );
+                   stateVectorInclSTM.block( 0, 1, 6, 6 ), stateVectorOnly, currentTime, numberOfIterations );
         initialStateVectorInclSTM.block( 0, 0, 6, 1 ) += differentialCorrection.segment( 0, 6 ) / 1.0;        
 
         orbitalPeriod  = orbitalPeriod + 2.0 * differentialCorrection( 6 ) / 1.0;
