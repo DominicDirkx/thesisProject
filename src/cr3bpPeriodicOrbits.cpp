@@ -15,106 +15,6 @@ namespace tudat
 namespace cr3bp
 {
 
-double getEarthMoonPeriodicOrbitAmplitude( const int librationPointNumber, const CR3BPPeriodicOrbitTypes orbitType, const int guessIteration )
-{
-    if( librationPointNumber < 1 ||librationPointNumber > 2 )
-    {
-        throw std::runtime_error( "Error when getting Earth-Moon periodic orbit amplitude, libration point " +
-                                  std::to_string( librationPointNumber ) + " is not supported." );
-    }
-    double amplitude = TUDAT_NAN;
-    if( guessIteration == 0 )
-    {
-        if (orbitType == horizontal_lyapunov_orbit )
-        {
-            if (librationPointNumber == 1 )
-            {
-                amplitude = 1.0e-3;
-            }
-            else if (librationPointNumber == 2 )
-            {
-                amplitude = 1.0e-4;
-            }
-        }
-        else if (orbitType == vertical_lyapunov_orbit )
-        {
-            if (librationPointNumber == 1)
-            {
-                amplitude = 1.0e-1;
-            }
-            else if (librationPointNumber == 2)
-            {
-                amplitude = 1.0e-1;
-            }
-        }
-        else if (orbitType == halo_orbit )
-        {
-            if (librationPointNumber == 1)
-            {
-                amplitude = -1.1e-1;
-            }
-            else if (librationPointNumber == 2)
-            {
-                amplitude = 1.5e-1;
-            }
-        }
-    }
-    else if( guessIteration == 1 )
-    {
-
-        if (orbitType == horizontal_lyapunov_orbit )
-        {
-            if (librationPointNumber == 1)
-            {
-                amplitude = 1.0e-4;
-            }
-            else if (librationPointNumber == 2)
-            {
-                amplitude = 1.0e-3;
-            }
-        }
-        else if (orbitType == vertical_lyapunov_orbit )
-        {
-            if (librationPointNumber == 1)
-            {
-                amplitude = 2.0e-1;
-            }
-            else if (librationPointNumber == 2)
-            {
-                amplitude = 2.0e-1;
-            }
-        }
-        else if (orbitType == halo_orbit )
-        {
-            if (librationPointNumber == 1)
-            {
-                amplitude = -1.2e-1;
-            }
-            else if (librationPointNumber == 2)
-            {
-                amplitude = 1.6e-1;
-            }
-        }
-    }
-    else
-    {
-        throw std::runtime_error( "Error when getting Earth-Moon periodic orbit amplitude, iteration " +
-                                  std::to_string( guessIteration ) + " is not supported." );
-    }
-
-    return amplitude;
-}
-
-std::pair< Eigen::Vector6d, double >  getLibrationPointPeriodicOrbitInitialStateVectorGuess(
-        const int librationPointNumber, const CR3BPPeriodicOrbitTypes orbitType, const int guessIteration,
-        const boost::function< double( const int librationPointNumber, const CR3BPPeriodicOrbitTypes orbitType, const int guessIteration ) > getAmplitude )
-{
-    double amplitude = getAmplitude( librationPointNumber, orbitType, guessIteration );
-    std::pair< Eigen::Vector6d, double >  richardsonThirdOrderApproximationResult =
-            richardsonApproximationLibrationPointPeriodicOrbit( orbitType, librationPointNumber, amplitude);
-
-    return richardsonThirdOrderApproximationResult;
-}
 
 CR3BPPeriodicOrbitModel::CR3BPPeriodicOrbitModel(
         const CR3BPPeriodicOrbitTypes orbitType,
@@ -125,16 +25,18 @@ CR3BPPeriodicOrbitModel::CR3BPPeriodicOrbitModel(
         const int maximumNumberOfDifferentialCorrectionIterations,
         const double maximumAllowedPositionDeviationFromPeriodicOrbit,
         const double maximumAllowedVelocityDeviationFromPeriodicOrbit,
-        const double maximumAllowedEigenvalueDeviation ):
+        const double maximumAllowedEigenvalueDeviation,
+        const int maximumNumberOfNumericalContinuations ):
     orbitType_( orbitType ), librationPointNumber_( librationPointNumber ), massParameter_( massParameter ),
     maximumNumberOfDifferentialCorrectionIterations_( maximumNumberOfDifferentialCorrectionIterations ),
     maximumAllowedPositionDeviationFromPeriodicOrbit_( maximumAllowedPositionDeviationFromPeriodicOrbit ),
     maximumAllowedVelocityDeviationFromPeriodicOrbit_( maximumAllowedVelocityDeviationFromPeriodicOrbit ),
-    maximumAllowedEigenvalueDeviation_( maximumAllowedEigenvalueDeviation )
+    maximumAllowedEigenvalueDeviation_( maximumAllowedEigenvalueDeviation ),
+    maximumNumberOfNumericalContinuations_( maximumNumberOfNumericalContinuations )
 {
     firstInitialStateGuess_ =
             richardsonApproximationLibrationPointPeriodicOrbit( orbitType_, librationPointNumber_, orbitAmplitudeForFirstInitialStateGuess );
-    firstInitialStateGuess_ =
+    secondInitialStateGuess_ =
             richardsonApproximationLibrationPointPeriodicOrbit( orbitType_, librationPointNumber_, orbitAmplitudeForSecondInitialStateGuess );
     stateDerivativeModel_ = boost::make_shared< propagators::StateDerivativeCircularRestrictedThreeBodyProblem  >( massParameter_ );
 }
@@ -148,13 +50,15 @@ CR3BPPeriodicOrbitModel::CR3BPPeriodicOrbitModel(
         const int maximumNumberOfDifferentialCorrectionIterations,
         const double maximumAllowedPositionDeviationFromPeriodicOrbit,
         const double maximumAllowedVelocityDeviationFromPeriodicOrbit,
-        const double maximumAllowedEigenvalueDeviation ):
+        const double maximumAllowedEigenvalueDeviation,
+        const int maximumNumberOfNumericalContinuations ):
     orbitType_( orbitType ), librationPointNumber_( librationPointNumber ), massParameter_( massParameter ),
     firstInitialStateGuess_( firstInitialStateGuess ), secondInitialStateGuess_( secondInitialStateGuess ),
     maximumNumberOfDifferentialCorrectionIterations_( maximumNumberOfDifferentialCorrectionIterations ),
     maximumAllowedPositionDeviationFromPeriodicOrbit_( maximumAllowedPositionDeviationFromPeriodicOrbit ),
     maximumAllowedVelocityDeviationFromPeriodicOrbit_( maximumAllowedVelocityDeviationFromPeriodicOrbit ),
-    maximumAllowedEigenvalueDeviation_( maximumAllowedEigenvalueDeviation )
+    maximumAllowedEigenvalueDeviation_( maximumAllowedEigenvalueDeviation ),
+    maximumNumberOfNumericalContinuations_( maximumNumberOfNumericalContinuations )
 {
     stateDerivativeModel_ = boost::make_shared< propagators::StateDerivativeCircularRestrictedThreeBodyProblem  >( massParameter_ );
 }
@@ -302,6 +206,10 @@ bool CR3BPPeriodicOrbitModel::terminateNumericalContinuation(
     else
     {        // Check eigenvalue condition (at least one pair equalling a real one)
         continueNumericalContinuation = checkMonodromyEigenvalues( stmPartOfStateVectorInMatrixForm );
+        if( !continueNumericalContinuation )
+        {
+            std::cout << "\n\nNUMERICAL CONTINUATION STOPPED DUE TO EIGENVALUES OF MONODROMY MATRIX\n\n" << std::endl;
+        }
     }
     return continueNumericalContinuation;
 }
@@ -343,6 +251,9 @@ bool CR3BPPeriodicOrbitModel::continueDifferentialCorrection(
         positionDeviationFromPeriodicOrbit = sqrt(pow(stateVector(1), 2));
         velocityDeviationFromPeriodicOrbit = sqrt(pow(stateVector(3), 2) + pow(stateVector(5), 2));
     }
+
+//    std::cout<<"Checking convergence: "<<positionDeviationFromPeriodicOrbit<<" "<<maximumPositionDeviationToUse<<" "<<
+//            velocityDeviationFromPeriodicOrbit<<" "<<maximumVelocityDeviationToUse<<std::endl;
 
     return( ( positionDeviationFromPeriodicOrbit > maximumPositionDeviationToUse ) ||
                            ( velocityDeviationFromPeriodicOrbit > maximumVelocityDeviationToUse ) );
@@ -394,6 +305,132 @@ bool CR3BPPeriodicOrbitModel::checkMonodromyEigenvalues( const Eigen::Matrix6d &
     }
 
     return eigenvalueRealOne;
+}
+
+double getEarthMoonPeriodicOrbitAmplitude( const int librationPointNumber, const CR3BPPeriodicOrbitTypes orbitType, const int guessIteration )
+{
+    if( librationPointNumber < 1 ||librationPointNumber > 2 )
+    {
+        throw std::runtime_error( "Error when getting Earth-Moon periodic orbit amplitude, libration point " +
+                                  std::to_string( librationPointNumber ) + " is not supported." );
+    }
+    double amplitude = TUDAT_NAN;
+    if( guessIteration == 0 )
+    {
+        if (orbitType == horizontal_lyapunov_orbit )
+        {
+            if (librationPointNumber == 1 )
+            {
+                amplitude = 1.0e-3;
+            }
+            else if (librationPointNumber == 2 )
+            {
+                amplitude = 1.0e-4;
+            }
+        }
+        else if (orbitType == vertical_lyapunov_orbit )
+        {
+            if (librationPointNumber == 1)
+            {
+                amplitude = 1.0e-1;
+            }
+            else if (librationPointNumber == 2)
+            {
+                amplitude = 1.0e-1;
+            }
+        }
+        else if (orbitType == halo_orbit )
+        {
+            if (librationPointNumber == 1)
+            {
+                amplitude = -1.1e-1;
+            }
+            else if (librationPointNumber == 2)
+            {
+                amplitude = 1.5e-1;
+            }
+        }
+    }
+    else if( guessIteration == 1 )
+    {
+
+        if (orbitType == horizontal_lyapunov_orbit )
+        {
+            if (librationPointNumber == 1)
+            {
+                amplitude = 1.0e-4;
+            }
+            else if (librationPointNumber == 2)
+            {
+                amplitude = 1.0e-3;
+            }
+        }
+        else if (orbitType == vertical_lyapunov_orbit )
+        {
+            if (librationPointNumber == 1)
+            {
+                amplitude = 2.0e-1;
+            }
+            else if (librationPointNumber == 2)
+            {
+                amplitude = 2.0e-1;
+            }
+        }
+        else if (orbitType == halo_orbit )
+        {
+            if (librationPointNumber == 1)
+            {
+                amplitude = -1.2e-1;
+            }
+            else if (librationPointNumber == 2)
+            {
+                amplitude = 1.6e-1;
+            }
+        }
+    }
+    else
+    {
+        throw std::runtime_error( "Error when getting Earth-Moon periodic orbit amplitude, iteration " +
+                                  std::to_string( guessIteration ) + " is not supported." );
+    }
+
+    return amplitude;
+}
+
+std::pair< Eigen::Vector6d, double >  getLibrationPointPeriodicOrbitInitialStateVectorGuess(
+        const int librationPointNumber, const CR3BPPeriodicOrbitTypes orbitType, const int guessIteration,
+        const boost::function< double( const int librationPointNumber, const CR3BPPeriodicOrbitTypes orbitType, const int guessIteration ) > getAmplitude )
+{
+    double amplitude = getAmplitude( librationPointNumber, orbitType, guessIteration );
+    std::pair< Eigen::Vector6d, double >  richardsonThirdOrderApproximationResult =
+            richardsonApproximationLibrationPointPeriodicOrbit( orbitType, librationPointNumber, amplitude);
+
+    return richardsonThirdOrderApproximationResult;
+}
+
+boost::shared_ptr< CR3BPPeriodicOrbitModel > createEarthMoonPeriodicOrbitModel(
+        const int librationPointNumber,
+        const CR3BPPeriodicOrbitTypes orbitType,
+        const double massParameter,
+        const int maximumNumberOfDifferentialCorrectionIterations,
+        const double maximumAllowedPositionDeviationFromPeriodicOrbit,
+        const double maximumAllowedVelocityDeviationFromPeriodicOrbit,
+        const double maximumAllowedEigenvalueDeviation,
+        const int maximumNumberOfNumericalContinuations )
+{
+    const double orbitAmplitudeForFirstInitialStateGuess =
+    getEarthMoonPeriodicOrbitAmplitude( librationPointNumber, orbitType, 0 );
+    const double orbitAmplitudeForSecondInitialStateGuess =
+    getEarthMoonPeriodicOrbitAmplitude( librationPointNumber, orbitType, 1 );
+
+    return boost::make_shared< CR3BPPeriodicOrbitModel >(
+            orbitType, librationPointNumber, massParameter,
+            orbitAmplitudeForFirstInitialStateGuess, orbitAmplitudeForSecondInitialStateGuess,
+            maximumNumberOfDifferentialCorrectionIterations,
+            maximumAllowedPositionDeviationFromPeriodicOrbit,
+            maximumAllowedVelocityDeviationFromPeriodicOrbit,
+            maximumAllowedEigenvalueDeviation,
+            maximumNumberOfNumericalContinuations );
 }
 
 }

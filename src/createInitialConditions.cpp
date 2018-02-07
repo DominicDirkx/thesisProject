@@ -113,6 +113,7 @@ Eigen::MatrixXd correctPeriodicOrbitInitialState(
 {
     Eigen::Vector6d initialStateVector = initialStateGuess;
 
+
     // Correct state vector guess
     Eigen::VectorXd differentialCorrectionResult = applyDifferentialCorrection(
                 initialStateVector, orbitalPeriod, periodicOrbitModel, integratorSettings, orbitNumber );
@@ -128,16 +129,17 @@ Eigen::MatrixXd correctPeriodicOrbitInitialState(
                     periodicOrbitModel->getStateDerivativeFunctionWithStateTransition( ),
                     integratorSettings, orbitalPeriod, stateHistory ).first;
 
-//        writeStateHistoryToFile( stateHistory, orbitNumber, orbitType, librationPointNr, 1000, false );
+        writeStateHistoryToFile( stateHistory, orbitNumber, periodicOrbitModel->getOrbitType( ),
+                                 periodicOrbitModel->getLibrationPointNumber( ), 1000, false );
 
 //        // Save results
-//        double jacobiEnergyHalfPeriod = tudat::gravitation::computeJacobiEnergy(
-//                    periodicOrbitModel->getMassParameter( ), differentialCorrectionResult.segment( 7, 6 ) );
-//        appendDifferentialCorrectionResultsVector( jacobiEnergyHalfPeriod, differentialCorrectionResult, differentialCorrections );
+        double jacobiEnergyHalfPeriod = tudat::gravitation::computeJacobiEnergy(
+                    periodicOrbitModel->getMassParameter( ), differentialCorrectionResult.segment( 7, 6 ) );
+        appendDifferentialCorrectionResultsVector( jacobiEnergyHalfPeriod, differentialCorrectionResult, differentialCorrections );
 
-//        double jacobiEnergy = tudat::gravitation::computeJacobiEnergy(
-//                    periodicOrbitModel->getMassParameter( ), stateVectorInclSTM.block( 0, 0, 6, 1 ));
-//        appendResultsVector( jacobiEnergy, orbitalPeriod, initialStateVector, stateVectorInclSTM, initialConditions );
+        double jacobiEnergy = tudat::gravitation::computeJacobiEnergy(
+                    periodicOrbitModel->getMassParameter( ), stateVectorInclSTM.block( 0, 0, 6, 1 ));
+        appendResultsVector( jacobiEnergy, orbitalPeriod, initialStateVector, stateVectorInclSTM, initialConditions );
 
         return stateVectorInclSTM;
     }
@@ -149,20 +151,20 @@ Eigen::MatrixXd correctPeriodicOrbitInitialState(
 
 }
 
-void writeFinalResultsToFiles( const int librationPointNr, const std::string orbitType,
+void writeFinalResultsToFiles( const int librationPointNr, const tudat::cr3bp::CR3BPPeriodicOrbitTypes orbitType,
                                std::vector< Eigen::VectorXd > initialConditions,
                                std::vector< Eigen::VectorXd > differentialCorrections )
 {
     // Prepare file for initial conditions
-    remove(("../data/raw/orbits/L" + std::to_string(librationPointNr) + "_" + orbitType + "_initial_conditions.txt").c_str());
+    remove(("../data/raw/orbits/L" + std::to_string(librationPointNr) + "_" + std::to_string( orbitType ) + "_initial_conditions.txt").c_str());
     std::ofstream textFileInitialConditions;
-    textFileInitialConditions.open(("../data/raw/orbits/L" + std::to_string(librationPointNr) + "_" + orbitType + "_initial_conditions.txt"));
+    textFileInitialConditions.open(("../data/raw/orbits/L" + std::to_string(librationPointNr) + "_" + std::to_string( orbitType ) + "_initial_conditions.txt"));
     textFileInitialConditions.precision(std::numeric_limits<double>::digits10);
 
     // Prepare file for differential correction
-    remove(("../data/raw/orbits/L" + std::to_string(librationPointNr) + "_" + orbitType + "_differential_correction.txt").c_str());
+    remove(("../data/raw/orbits/L" + std::to_string(librationPointNr) + "_" + std::to_string( orbitType ) + "_differential_correction.txt").c_str());
     std::ofstream textFileDifferentialCorrection;
-    textFileDifferentialCorrection.open(("../data/raw/orbits/L" + std::to_string(librationPointNr) + "_" + orbitType + "_differential_correction.txt"));
+    textFileDifferentialCorrection.open(("../data/raw/orbits/L" + std::to_string(librationPointNr) + "_" + std::to_string( orbitType ) + "_differential_correction.txt"));
     textFileDifferentialCorrection.precision(std::numeric_limits<double>::digits10);
 
     // Write initial conditions to file
@@ -252,7 +254,7 @@ void createPeriodicOrbitInitialConditionsFromExistingData(
 
         continueNumericalContinuation =
                 periodicOrbitModel->terminateNumericalContinuation(
-                    stateVectorInclSTM.block( 1, 0, 6, 6 ), stateVectorInclSTM.block( 0, 0, 6, 1 ), orbitalPeriod, numberOfInitialConditions );
+                    stateVectorInclSTM.block( 0, 1, 6, 6 ), stateVectorInclSTM.block( 0, 0, 6, 1 ), orbitalPeriod, numberOfInitialConditions );
 
         numberOfInitialConditions += 1;
     }
@@ -260,7 +262,7 @@ void createPeriodicOrbitInitialConditionsFromExistingData(
 
     std::cout<<"Generating initial state, "<<numberOfInitialConditions<<" orbits at. Total generation time = "<< 1000.0 * (c_end-c_start) / CLOCKS_PER_SEC <<" milliseconds "<<std::endl;
 
-    //writeFinalResultsToFiles( librationPointNr, orbitType, initialConditions, differentialCorrections );
+    writeFinalResultsToFiles( periodicOrbitModel->getLibrationPointNumber( ), periodicOrbitModel->getOrbitType( ), initialConditions, differentialCorrections );
 }
 
 void createPeriodicOrbitInitialConditions(
@@ -282,6 +284,7 @@ void createPeriodicOrbitInitialConditions(
     correctPeriodicOrbitInitialState(
                 richardsonThirdOrderApproximationResultIteration1.first, richardsonThirdOrderApproximationResultIteration1.second, 0,
                  periodicOrbitModel, integratorSettings, initialConditions, differentialCorrections );
+
     correctPeriodicOrbitInitialState(
                 richardsonThirdOrderApproximationResultIteration2.first, richardsonThirdOrderApproximationResultIteration2.second, 1,
                 periodicOrbitModel, integratorSettings, initialConditions, differentialCorrections );

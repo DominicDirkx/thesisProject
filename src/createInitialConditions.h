@@ -23,7 +23,7 @@ void appendDifferentialCorrectionResultsVector(
         const double jacobiEnergyHalfPeriod,  const Eigen::VectorXd& differentialCorrectionResult,
         std::vector< Eigen::VectorXd >& differentialCorrections );
 
-void writeFinalResultsToFiles( const int librationPointNr, const std::string orbitType,
+void writeFinalResultsToFiles( const int librationPointNr, const tudat::cr3bp::CR3BPPeriodicOrbitTypes orbitType,
                                std::vector< Eigen::VectorXd > initialConditions,
                                std::vector< Eigen::VectorXd > differentialCorrections );
 

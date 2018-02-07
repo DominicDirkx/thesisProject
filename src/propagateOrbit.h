@@ -8,11 +8,13 @@
 #include "Tudat/Basics/basicTypedefs.h"
 #include "Tudat/Mathematics/NumericalIntegrators/createNumericalIntegrator.h"
 
+#include "cr3bpPeriodicOrbitTypes.h"
+
 Eigen::MatrixXd getFullInitialState( const Eigen::Vector6d& initialState );
 
 void writeStateHistoryToFile(
         const std::map< double, Eigen::Vector6d >& stateHistory,
-        const int orbitId, const std::string orbitType, const int librationPointNr,
+        const int orbitId, const tudat::cr3bp::CR3BPPeriodicOrbitTypes orbitType, const int librationPointNr,
         const int saveEveryNthIntegrationStep, const bool completeInitialConditionsHaloFamily );
 
 std::pair< Eigen::MatrixXd, double > propagateOrbit(

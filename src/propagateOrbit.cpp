@@ -25,7 +25,7 @@ Eigen::MatrixXd getFullInitialState( const Eigen::Vector6d& initialState )
 
 void writeStateHistoryToFile(
         const std::map< double, Eigen::Vector6d >& stateHistory,
-        const int orbitId, const std::string orbitType, const int librationPointNr,
+        const int orbitId, const cr3bp::CR3BPPeriodicOrbitTypes orbitType, const int librationPointNr,
         const int saveEveryNthIntegrationStep, const bool completeInitialConditionsHaloFamily )
 {
     std::string fileNameString;
@@ -35,22 +35,22 @@ void writeStateHistoryToFile(
     {
         if (completeInitialConditionsHaloFamily == false)
         {
-            fileNameString = ("L" + std::to_string(librationPointNr) + "_" + orbitType + "_" + std::to_string(orbitId) + "_" + std::to_string(saveEveryNthIntegrationStep) + ".txt");
+            fileNameString = ("L" + std::to_string(librationPointNr) + "_" + std::to_string( orbitType ) + "_" + std::to_string(orbitId) + "_" + std::to_string(saveEveryNthIntegrationStep) + ".txt");
         }
         else
         {
-            fileNameString = ("L" + std::to_string(librationPointNr) + "_" + orbitType + "_n_" + std::to_string(orbitId) + "_" + std::to_string(saveEveryNthIntegrationStep) + ".txt");
+            fileNameString = ("L" + std::to_string(librationPointNr) + "_" + std::to_string( orbitType ) + "_n_" + std::to_string(orbitId) + "_" + std::to_string(saveEveryNthIntegrationStep) + ".txt");
         }
     }
     else
     {
         if (completeInitialConditionsHaloFamily == false)
         {
-            fileNameString = ("L" + std::to_string(librationPointNr) + "_" + orbitType + "_" + std::to_string(orbitId) + ".txt");
+            fileNameString = ("L" + std::to_string(librationPointNr) + "_" + std::to_string( orbitType ) + "_" + std::to_string(orbitId) + ".txt");
         }
         else
         {
-            fileNameString = ("L" + std::to_string(librationPointNr) + "_" + orbitType + "_n_" + std::to_string(orbitId) + ".txt");
+            fileNameString = ("L" + std::to_string(librationPointNr) + "_" + std::to_string( orbitType ) + "_n_" + std::to_string(orbitId) + ".txt");
         }
     }
 

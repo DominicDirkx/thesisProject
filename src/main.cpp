@@ -20,6 +20,8 @@
 //#include "completeInitialConditionsHaloFamily.h"
 //#include "createInitialConditionsAxialFamily.h"
 #include "connectManifoldsAtTheta.h"
+#include "cr3bpPeriodicOrbits.h"
+
 //#include "omp.h"
 
 //
@@ -32,8 +34,6 @@
 //  -  maximumNumberOfInitialConditions: Should be an input parameter to createPeriodicOrbitInitialConditions, as should settings for
 //  continuation
 //  DONE: - integrator settings should be an input variable to e.g. createPeriodicOrbitInitialConditions.
-
-double massParameter = tudat::gravitation::circular_restricted_three_body_problem::computeMassParameter( tudat::celestial_body_constants::EARTH_GRAVITATIONAL_PARAMETER, tudat::celestial_body_constants::MOON_GRAVITATIONAL_PARAMETER );
 
 int main (){
 
@@ -54,34 +54,42 @@ int main (){
               relativeErrorTolerance, absoluteErrorTolerance );
     integratorSettings->saveFrequency_ = 1;
 
+    using namespace tudat::cr3bp;
+
     #pragma omp parallel num_threads(6)
     {
         #pragma omp for
         for (unsigned int i=1; i<=6; i++) {
-//            if (i ==1)
-//            {
-//                createPeriodicOrbitInitialConditions(1, "horizontal", integratorSettings );
-//            }
-//            if (i ==2)
-//            {
-//                createPeriodicOrbitInitialConditions(2, "horizontal", integratorSettings );
-//            }
-//            if (i ==3)
-//            {
-//                createPeriodicOrbitInitialConditions(1, "halo", integratorSettings );
-//            }
-//            if (i ==4)
-//            {
-//                createPeriodicOrbitInitialConditions(2, "halo", integratorSettings );
-//            }
-//            if (i ==5)
-//            {
-//                createPeriodicOrbitInitialConditions(1, "vertical", integratorSettings );
-//            }
-//            if (i ==6)
-//            {
-//                createPeriodicOrbitInitialConditions(2, "vertical", integratorSettings );
-//            }
+            if (i ==1)
+            {
+                createPeriodicOrbitInitialConditions(
+                            integratorSettings, createEarthMoonPeriodicOrbitModel( 1, horizontal_lyapunov_orbit ) );
+            }
+            if (i ==2)
+            {
+                createPeriodicOrbitInitialConditions(
+                            integratorSettings, createEarthMoonPeriodicOrbitModel( 2, horizontal_lyapunov_orbit ) );
+            }
+            if (i ==3)
+            {
+                createPeriodicOrbitInitialConditions(
+                            integratorSettings, createEarthMoonPeriodicOrbitModel( 1, halo_orbit ) );
+            }
+            if (i ==4)
+            {
+                createPeriodicOrbitInitialConditions(
+                            integratorSettings, createEarthMoonPeriodicOrbitModel( 2, halo_orbit ) );
+            }
+            if (i ==5)
+            {
+                createPeriodicOrbitInitialConditions(
+                            integratorSettings, createEarthMoonPeriodicOrbitModel( 1, vertical_lyapunov_orbit ) );
+            }
+            if (i ==6)
+            {
+                createPeriodicOrbitInitialConditions(
+                            integratorSettings, createEarthMoonPeriodicOrbitModel( 1, vertical_lyapunov_orbit ) );
+            }
         }
     }
 

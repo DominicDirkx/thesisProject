@@ -14,7 +14,9 @@
 #include <Eigen/Core>
 
 #include "Tudat/Basics/basicTypedefs.h"
+#include "Tudat/Astrodynamics/BasicAstrodynamics/celestialBodyConstants.h"
 #include "Tudat/Astrodynamics/Propagators/stateDerivativeCircularRestrictedThreeBodyProblem.h"
+#include "Tudat/Astrodynamics/Gravitation/librationPoint.h"
 
 #include "cr3bpPeriodicOrbitTypes.h"
 
@@ -23,14 +25,6 @@ namespace tudat
 
 namespace cr3bp
 {
-
-
-double getEarthMoonPeriodicOrbitAmplitude( const int librationPointNumber, const CR3BPPeriodicOrbitTypes orbitType, const int guessIteration );
-
-std::pair< Eigen::Vector6d, double > getLibrationPointPeriodicOrbitInitialStateVectorGuess(
-        const int librationPointNumber, const CR3BPPeriodicOrbitTypes orbitType, const int guessIteration,
-        const boost::function< double( const int librationPointNumber, const std::string& orbitType, const int guessIteration ) > getAmplitude =
-        getEarthMoonPeriodicOrbitAmplitude );
 
 class CR3BPPeriodicOrbitModel
 {
@@ -44,7 +38,8 @@ public:
             const int maximumNumberOfDifferentialCorrectionIterations,
             const double maximumAllowedPositionDeviationFromPeriodicOrbit,
             const double maximumAllowedVelocityDeviationFromPeriodicOrbit,
-            const double maximumAllowedEigenvalueDeviation );
+            const double maximumAllowedEigenvalueDeviation,
+            const int maximumNumberOfNumericalContinuations );
 
     CR3BPPeriodicOrbitModel(
             const CR3BPPeriodicOrbitTypes orbitType,
@@ -55,7 +50,8 @@ public:
             const int maximumNumberOfDifferentialCorrectionIterations,
             const double maximumAllowedPositionDeviationFromPeriodicOrbit,
             const double maximumAllowedVelocityDeviationFromPeriodicOrbit,
-            const double maximumAllowedEigenvalueDeviation );
+            const double maximumAllowedEigenvalueDeviation,
+            const int maximumNumberOfNumericalContinuations );
 
     boost::function< Eigen::Matrix< double, 6, 7 >( const double, const Eigen::Matrix< double, 6, 7 >& ) >
     getStateDerivativeFunctionWithStateTransition( )
@@ -104,6 +100,16 @@ public:
         return massParameter_;
     }
 
+    CR3BPPeriodicOrbitTypes getOrbitType( )
+    {
+        return orbitType_;
+    }
+
+    int getLibrationPointNumber( )
+    {
+        return librationPointNumber_;
+    }
+
 private:
 
     bool checkMonodromyEigenvalues( const Eigen::Matrix6d &monodromyMatrix );
@@ -132,6 +138,25 @@ private:
 
     std::pair< Eigen::Vector6d, double > secondInitialStateGuess_;
 };
+
+double getEarthMoonPeriodicOrbitAmplitude( const int librationPointNumber, const CR3BPPeriodicOrbitTypes orbitType, const int guessIteration );
+
+std::pair< Eigen::Vector6d, double > getLibrationPointPeriodicOrbitInitialStateVectorGuess(
+        const int librationPointNumber, const CR3BPPeriodicOrbitTypes orbitType, const int guessIteration,
+        const boost::function< double( const int librationPointNumber, const std::string& orbitType, const int guessIteration ) > getAmplitude =
+        getEarthMoonPeriodicOrbitAmplitude );
+
+boost::shared_ptr< CR3BPPeriodicOrbitModel > createEarthMoonPeriodicOrbitModel(
+        const int librationPointNumber,
+        const CR3BPPeriodicOrbitTypes orbitType,
+        const double massParameter =
+        gravitation::circular_restricted_three_body_problem::computeMassParameter(
+            tudat::celestial_body_constants::EARTH_GRAVITATIONAL_PARAMETER, tudat::celestial_body_constants::MOON_GRAVITATIONAL_PARAMETER ),
+        const int maximumNumberOfDifferentialCorrectionIterations = 25,
+        const double maximumAllowedPositionDeviationFromPeriodicOrbit = 1.0E-12,
+        const double maximumAllowedVelocityDeviationFromPeriodicOrbit = 1.0E-12,
+        const double maximumAllowedEigenvalueDeviation = 1.0E-3,
+        const int maximumNumberOfNumericalContinuations = 1E4 );
 
 }
 

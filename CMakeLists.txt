@@ -47,17 +47,17 @@ include(${CMAKE_MODULE_PATH}/compiler.cmake)
 set(SRCROOT "${CMAKE_CURRENT_SOURCE_DIR}")
 
 # Define the code root directory.
-set(CODEROOT "${CMAKE_CURRENT_SOURCE_DIR}/..")
+set(CODEROOT "${CMAKE_CURRENT_SOURCE_DIR}")
 
 # Set testing options based on platform.
 enable_testing()
 
 # Set lib and bin directories where static libraries and unit tests are built.
 if(NOT LIB_ROOT)
-  set(LIB_ROOT "${CODEROOT}/thesisProject/lib")
+  set(LIB_ROOT "${CODEROOT}/lib")
 endif()
 if(NOT BIN_ROOT)
-  set(BIN_ROOT "${CODEROOT}/thesisProject/bin")
+  set(BIN_ROOT "${CODEROOT}/bin")
 endif()
 
 # Set the global macros for setting up targets.

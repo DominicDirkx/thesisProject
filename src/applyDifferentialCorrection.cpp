@@ -43,7 +43,7 @@ Eigen::VectorXd applyDifferentialCorrection(
 
     int numberOfIterations = 0;
     // Apply differential correction and propagate to half-period point until converged.
-    while ( periodicOrbitModel->continueDifferentialCorrection( stateVectorOnly, numberOfIterations ) )
+    do
     {
 
         differentialCorrection = periodicOrbitModel->computeDifferentialCorrection(
@@ -62,6 +62,7 @@ Eigen::VectorXd applyDifferentialCorrection(
 
         numberOfIterations += 1;
     }
+    while ( periodicOrbitModel->continueDifferentialCorrection( stateVectorOnly, numberOfIterations ) );
 //    std::cout<<"Number of iterations: "<<numberOfIterations<<std::endl;
 
 //    double jacobiEnergyHalfPeriod       = tudat::gravitation::computeJacobiEnergy(massParameter, stateVectorOnly);
