@@ -214,6 +214,24 @@ bool CR3BPPeriodicOrbitModel::terminateNumericalContinuation(
     return continueNumericalContinuation;
 }
 
+void CR3BPPeriodicOrbitModel::getPositionAndVelocityDeviation(
+        const Eigen::Vector6d& stateVector,
+        double& positionDeviationFromPeriodicOrbit, double& velocityDeviationFromPeriodicOrbit )
+{
+    if ( orbitType_ == axial_orbit )
+    {
+        // Initial condition for axial family should be [x, 0, 0, 0, ydot, zdot]
+        positionDeviationFromPeriodicOrbit = sqrt(pow(stateVector(1), 2) + pow(stateVector(2), 2));
+        velocityDeviationFromPeriodicOrbit = sqrt(pow(stateVector(3), 2));
+    }
+    else
+    {
+        // Initial condition for other families should be [x, 0, y, 0, ydot, 0]
+        positionDeviationFromPeriodicOrbit = sqrt(pow(stateVector(1), 2));
+        velocityDeviationFromPeriodicOrbit = sqrt(pow(stateVector(3), 2) + pow(stateVector(5), 2));
+    }
+}
+
 bool CR3BPPeriodicOrbitModel::continueDifferentialCorrection(
         const Eigen::Vector6d stateVector, const int numberOfIterations )
 {
@@ -239,18 +257,6 @@ bool CR3BPPeriodicOrbitModel::continueDifferentialCorrection(
     }
 
     double positionDeviationFromPeriodicOrbit, velocityDeviationFromPeriodicOrbit;
-    if ( orbitType_ == axial_orbit )
-    {
-        // Initial condition for axial family should be [x, 0, 0, 0, ydot, zdot]
-        positionDeviationFromPeriodicOrbit = sqrt(pow(stateVector(1), 2) + pow(stateVector(2), 2));
-        velocityDeviationFromPeriodicOrbit = sqrt(pow(stateVector(3), 2));
-    }
-    else
-    {
-        // Initial condition for other families should be [x, 0, y, 0, ydot, 0]
-        positionDeviationFromPeriodicOrbit = sqrt(pow(stateVector(1), 2));
-        velocityDeviationFromPeriodicOrbit = sqrt(pow(stateVector(3), 2) + pow(stateVector(5), 2));
-    }
 
 //    std::cout<<"Checking convergence: "<<positionDeviationFromPeriodicOrbit<<" "<<maximumPositionDeviationToUse<<" "<<
 //            velocityDeviationFromPeriodicOrbit<<" "<<maximumVelocityDeviationToUse<<std::endl;

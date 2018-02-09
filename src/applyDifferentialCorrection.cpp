@@ -8,80 +8,82 @@
 #include "Tudat/SimulationSetup/PropagationSetup/propagationTermination.h"
 
 #include "applyDifferentialCorrection.h"
-#include "computeDifferentialCorrection.h"
 #include "propagateOrbit.h"
-#include "stateDerivativeModel.h"
 #include "cr3bpPeriodicOrbits.h"
 
 using namespace tudat;
 
-Eigen::VectorXd applyDifferentialCorrection(
-        const Eigen::VectorXd& initialStateVector,
+Eigen::VectorXd applyDifferentialCorrectionForPeriodicOrbit(
+        const Eigen::VectorXd& initialStateVectorGuess,
         double orbitalPeriod,
         const boost::shared_ptr< tudat::cr3bp::CR3BPPeriodicOrbitModel > periodicOrbitModel,
         const boost::shared_ptr< tudat::numerical_integrators::IntegratorSettings< double > > integratorSettings,
         const int currentIteration )
 {
-    Eigen::MatrixXd initialStateVectorInclSTM = Eigen::MatrixXd::Zero( 6, 7 );
-
-    initialStateVectorInclSTM.block( 0, 0, 6, 1 ) = initialStateVector;
-    initialStateVectorInclSTM.block( 0, 1, 6, 6 ).setIdentity( );
-
     std::map< double, Eigen::Vector6d > stateHistory;
-    std::pair< Eigen::MatrixXd, double > halfPeriodState = propagateOrbitToFinalCondition(
-                initialStateVectorInclSTM,
+
+    // Propagate initial guess
+    Eigen::Matrix< double, 6, 7 > initialStateWithSTM = Eigen::Matrix< double, 6, 7 >::Zero( );
+    initialStateWithSTM.block( 0, 0, 6, 1 ) = initialStateVectorGuess;
+    initialStateWithSTM.block( 0, 1, 6, 6 ).setIdentity( );
+    std::pair< Eigen::Matrix< double, 6, 7 >, double > halfPeriodState = propagateOrbitToFinalCondition(
+                initialStateWithSTM,
                 periodicOrbitModel->getStateDerivativeFunctionWithStateTransition( ),
                 integratorSettings, orbitalPeriod / 2.0, stateHistory );
 
-    Eigen::MatrixXd stateVectorInclSTM = halfPeriodState.first;
-    double currentTime = halfPeriodState.second;
-    Eigen::VectorXd stateVectorOnly = stateVectorInclSTM.block( 0, 0, 6, 1 );
+    // Retrieve state and time of propagation
+    Eigen::Matrix< double, 6, 7 > stateWithSTMAtHalfPeriod = halfPeriodState.first;
+    double timeAtHalfPeriod = halfPeriodState.second;
+    Eigen::VectorXd stateVectorAtHalfPeriod = stateWithSTMAtHalfPeriod.block( 0, 0, 6, 1 );
 
     // Initialize variables
     Eigen::VectorXd differentialCorrection(7);
     Eigen::VectorXd outputVector(15);
 
     int numberOfIterations = 0;
+
     // Apply differential correction and propagate to half-period point until converged.
     do
     {
-
+        // Compute differential correction
         differentialCorrection = periodicOrbitModel->computeDifferentialCorrection(
-                   stateVectorInclSTM.block( 0, 1, 6, 6 ), stateVectorOnly, currentTime, numberOfIterations );
-        initialStateVectorInclSTM.block( 0, 0, 6, 1 ) += differentialCorrection.segment( 0, 6 ) / 1.0;        
+                   stateWithSTMAtHalfPeriod.block( 0, 1, 6, 6 ), stateVectorAtHalfPeriod, timeAtHalfPeriod, numberOfIterations );
 
-        orbitalPeriod  = orbitalPeriod + 2.0 * differentialCorrection( 6 ) / 1.0;
+        // Update initial state and time
+        initialStateWithSTM.block( 0, 0, 6, 1 ) += differentialCorrection.segment( 0, 6 );
+        orbitalPeriod  = orbitalPeriod + 2.0 * differentialCorrection( 6 );
 
-        std::pair< Eigen::MatrixXd, double > halfPeriodState = propagateOrbitToFinalCondition(
-                    initialStateVectorInclSTM, periodicOrbitModel->getStateDerivativeFunctionWithStateTransition( ),
+        // Propagate corrected state and retrieve results
+        std::pair< Eigen::Matrix< double, 6, 7 >, double > halfPeriodState = propagateOrbitToFinalCondition(
+                    initialStateWithSTM, periodicOrbitModel->getStateDerivativeFunctionWithStateTransition( ),
                     integratorSettings, orbitalPeriod / 2.0, stateHistory );
-
-        stateVectorInclSTM = halfPeriodState.first;
-        currentTime = halfPeriodState.second;
-        stateVectorOnly = stateVectorInclSTM.block( 0, 0, 6, 1 );
+        stateWithSTMAtHalfPeriod = halfPeriodState.first;
+        timeAtHalfPeriod = halfPeriodState.second;
+        stateVectorAtHalfPeriod = stateWithSTMAtHalfPeriod.block( 0, 0, 6, 1 );
 
         numberOfIterations += 1;
     }
-    while ( periodicOrbitModel->continueDifferentialCorrection( stateVectorOnly, numberOfIterations ) );
-//    std::cout<<"Number of iterations: "<<numberOfIterations<<std::endl;
+    while ( periodicOrbitModel->continueDifferentialCorrection( stateVectorAtHalfPeriod, numberOfIterations ) );
 
-//    double jacobiEnergyHalfPeriod       = tudat::gravitation::computeJacobiEnergy(massParameter, stateVectorOnly);
-//    double jacobiEnergyInitialCondition = tudat::gravitation::computeJacobiEnergy(massParameter, initialStateVectorInclSTM.block( 0, 0, 6, 1 ));
+//    double jacobiEnergyHalfPeriod       = tudat::gravitation::computeJacobiEnergy(massParameter, stateVectorAtHalfPeriod);
+//    double jacobiEnergyInitialCondition = tudat::gravitation::computeJacobiEnergy(massParameter, initialStateWithSTM.block( 0, 0, 6, 1 ));
 
-//    std::cout << "\nCorrected initial state vector:" << std::endl << initialStateVectorInclSTM.block( 0, 0, 6, 1 )        << std::endl
+//    std::cout << "\nCorrected initial state vector:" << std::endl << initialStateWithSTM.block( 0, 0, 6, 1 )        << std::endl
 //              << "\nwith orbital period: "           << orbitalPeriod                                              << std::endl
 //              << "||J(0) - J(T/2|| = "               << std::abs(jacobiEnergyInitialCondition - jacobiEnergyHalfPeriod) << std::endl
-//              << "||T/2 - t|| = "                    << std::abs(orbitalPeriod/2.0 - currentTime) << "\n"               << std::endl;
+//              << "||T/2 - t|| = "                    << std::abs(orbitalPeriod/2.0 - timeAtHalfPeriod) << "\n"               << std::endl;
 
     // The output vector consists of:
     // 1. Corrected initial state vector, including orbital period
-    // 2. Half period state vector, including currentTime of integration
+    // 2. Half period state vector, including timeAtHalfPeriod of integration
     // 3. numberOfIterations
-    outputVector.segment(0,6)    = initialStateVectorInclSTM.block( 0, 0, 6, 1 );
+    outputVector.segment(0,6)    = initialStateWithSTM.block( 0, 0, 6, 1 );
     outputVector(6)              = orbitalPeriod;
-    outputVector.segment(7,6)    = stateVectorOnly;
-    outputVector(13)             = currentTime;
+    outputVector.segment(7,6)    = stateVectorAtHalfPeriod;
+    outputVector(13)             = timeAtHalfPeriod;
     outputVector(14)             = numberOfIterations;
+
+    std::cout<<orbitalPeriod - 2.0 * timeAtHalfPeriod<<" "<<timeAtHalfPeriod<<std::endl;
 
     return outputVector;
 }

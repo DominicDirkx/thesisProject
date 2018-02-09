@@ -10,7 +10,7 @@
 
 #include "cr3bpPeriodicOrbits.h"
 
-Eigen::VectorXd applyDifferentialCorrection(
+Eigen::VectorXd applyDifferentialCorrectionForPeriodicOrbit(
         const Eigen::VectorXd& initialStateVector,
         double orbitalPeriod,
         const boost::shared_ptr< tudat::cr3bp::CR3BPPeriodicOrbitModel > periodicOrbitModel,

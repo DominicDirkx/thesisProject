@@ -17,6 +17,7 @@
 #include "Tudat/Astrodynamics/BasicAstrodynamics/celestialBodyConstants.h"
 #include "Tudat/Astrodynamics/Propagators/stateDerivativeCircularRestrictedThreeBodyProblem.h"
 #include "Tudat/Astrodynamics/Gravitation/librationPoint.h"
+#include "Tudat/Astrodynamics/Gravitation/jacobiEnergy.h"
 
 #include "cr3bpPeriodicOrbitTypes.h"
 
@@ -25,6 +26,43 @@ namespace tudat
 
 namespace cr3bp
 {
+
+struct CR3BPPeriodicOrbitProperties
+{
+public:
+
+    CR3BPPeriodicOrbitProperties(
+            const Eigen::Vector6d& initialState,
+            const Eigen::Matrix6d& monodromyMatrix,
+            const double jacobiEnergy,
+            const double orbitalPeriod,
+            const int numberOfDifferentialCorrectionIterations,
+            const Eigen::Vector6d& stateAtHalfPeriod,
+            const double jacobiEnergyAtHalfPeriod ):
+        initialState_( initialState ),
+        monodromyMatrix_( monodromyMatrix ),
+        jacobiEnergy_( jacobiEnergy ),
+        orbitalPeriod_( orbitalPeriod ),
+        numberOfDifferentialCorrectionIterations_( numberOfDifferentialCorrectionIterations ),
+        stateAtHalfPeriod_( stateAtHalfPeriod ),
+        jacobiEnergyAtHalfPeriod_( jacobiEnergyAtHalfPeriod )
+    { }
+
+    Eigen::Vector6d initialState_;
+
+    Eigen::Matrix6d monodromyMatrix_;
+
+    double jacobiEnergy_;
+
+    double orbitalPeriod_;
+
+    int numberOfDifferentialCorrectionIterations_;
+
+
+    Eigen::Vector6d stateAtHalfPeriod_;
+
+    double jacobiEnergyAtHalfPeriod_;
+};
 
 class CR3BPPeriodicOrbitModel
 {
@@ -85,6 +123,10 @@ public:
     bool continueDifferentialCorrection(
             const Eigen::Vector6d stateVector, const int numberOfIterations );
 
+    void getPositionAndVelocityDeviation(
+            const Eigen::Vector6d& stateVector,
+            double& positionDeviationFromPeriodicOrbit, double& velocityDeviationFromPeriodicOrbit );
+
     std::pair< Eigen::Vector6d, double > getFirstInitialStateGuess( )
     {
         return firstInitialStateGuess_;
@@ -108,6 +150,21 @@ public:
     int getLibrationPointNumber( )
     {
         return librationPointNumber_;
+    }
+
+    void addPeriodicOrbit(
+            const Eigen::Vector6d& initialState,
+            const Eigen::Matrix6d monodromyMatrix,
+            const double orbitalPeriod,
+            const Eigen::Vector6d& stateAtHalfPeriod,
+            const int numberOfDifferentialCorrections,
+            const std::map< double, Eigen::Vector6d > fullOrbitStateHistory =
+                std::map< double, Eigen::Vector6d >( ) )
+    {
+        double jacobiEnergyHalfPeriod = tudat::gravitation::computeJacobiEnergy(
+                    massParameter_, stateAtHalfPeriod );
+        double jacobiEnergy = tudat::gravitation::computeJacobiEnergy(
+                   massParameter_, initialState );
     }
 
 private:

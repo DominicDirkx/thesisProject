@@ -28,7 +28,9 @@ void writeFinalResultsToFiles( const int librationPointNr, const tudat::cr3bp::C
                                std::vector< Eigen::VectorXd > differentialCorrections );
 
 
-
+double getDefaultArcLength(
+        const double distanceIncrement,
+        const Eigen::Vector6d& currentState );
 
 //! Apply differential correction, and save results for periodic orbit
 Eigen::MatrixXd correctPeriodicOrbitInitialState(
@@ -38,10 +40,6 @@ Eigen::MatrixXd correctPeriodicOrbitInitialState(
                 const boost::shared_ptr< tudat::numerical_integrators::IntegratorSettings< double > > integratorSettings,
                 std::vector< Eigen::VectorXd >& initialConditions,
                 std::vector< Eigen::VectorXd >& differentialCorrections );
-
-double getDefaultArcLength(
-        const double distanceIncrement,
-        const Eigen::Vector6d& currentState );
 
 void createPeriodicOrbitInitialConditionsFromExistingData(
         const boost::shared_ptr< tudat::numerical_integrators::IntegratorSettings< double > > integratorSettings,

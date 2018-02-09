@@ -11,7 +11,6 @@
 #include "Tudat/InputOutput/basicInputOutput.h"
 
 #include "propagateOrbit.h"
-#include "stateDerivativeModel.h"
 
 using namespace tudat;
 

@@ -18,7 +18,6 @@
 
 #include "createInitialConditions.h"
 #include "applyDifferentialCorrection.h"
-#include "checkEigenvalues.h"
 #include "propagateOrbit.h"
 #include "richardsonThirdOrderApproximation.h"
 
@@ -115,7 +114,7 @@ Eigen::MatrixXd correctPeriodicOrbitInitialState(
 
 
     // Correct state vector guess
-    Eigen::VectorXd differentialCorrectionResult = applyDifferentialCorrection(
+    Eigen::VectorXd differentialCorrectionResult = applyDifferentialCorrectionForPeriodicOrbit(
                 initialStateVector, orbitalPeriod, periodicOrbitModel, integratorSettings, orbitNumber );
     initialStateVector = differentialCorrectionResult.segment( 0, 6 );
     orbitalPeriod = differentialCorrectionResult( 6 );
@@ -129,10 +128,14 @@ Eigen::MatrixXd correctPeriodicOrbitInitialState(
                     periodicOrbitModel->getStateDerivativeFunctionWithStateTransition( ),
                     integratorSettings, orbitalPeriod, stateHistory ).first;
 
-        writeStateHistoryToFile( stateHistory, orbitNumber, periodicOrbitModel->getOrbitType( ),
-                                 periodicOrbitModel->getLibrationPointNumber( ), 1000, false );
+        periodicOrbitModel->addPeriodicOrbit(
+                    initialStateVector, stateVectorInclSTM.block( 0, 1, 6, 6 ),
+                   orbitalPeriod, stateVectorInclSTM.block( 0, 0, 6, 1 ), differentialCorrectionResult( 14 ) , stateHistory );
 
-//        // Save results
+//        writeStateHistoryToFile( stateHistory, orbitNumber, periodicOrbitModel->getOrbitType( ),
+//                                 periodicOrbitModel->getLibrationPointNumber( ), 1000, false );
+
+////        // Save results
         double jacobiEnergyHalfPeriod = tudat::gravitation::computeJacobiEnergy(
                     periodicOrbitModel->getMassParameter( ), differentialCorrectionResult.segment( 7, 6 ) );
         appendDifferentialCorrectionResultsVector( jacobiEnergyHalfPeriod, differentialCorrectionResult, differentialCorrections );
